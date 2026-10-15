@@ -1,0 +1,21 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+prisma/*.db
+
+# Vercel local project settings
+.vercel/
+
+# Local AI assistant artifacts (not application source)
+.agents/
+.codex/
+.claude/
+.cursor/
+.windsurf/
+.ai/
+ai-artifacts/
+*.ai-generated.*
