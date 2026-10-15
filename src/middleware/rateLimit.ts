@@ -1,4 +1,5 @@
-import rateLimit, { ipKeyGenerator, type Options } from 'express-rate-limit';
+import type { Request } from 'express';
+import { ipKeyGenerator, rateLimit, type Options } from 'express-rate-limit';
 import { env } from '../config/env.js';
 
 const common: Partial<Options> = {
@@ -20,7 +21,7 @@ export const authLimiter = rateLimit({
   ...common,
   windowMs: 15 * 60_000,
   limit: 20,
-  keyGenerator: (req) => {
+  keyGenerator: (req: Request) => {
     const email = typeof req.body?.email === 'string' ? req.body.email.toLowerCase() : '';
     return `${ipKeyGenerator(req.ip ?? 'unknown')}:${email}`;
   },
