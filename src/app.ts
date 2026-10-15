@@ -2,15 +2,8 @@ import { randomUUID } from 'node:crypto';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import express, { type Express } from 'express';
-// Explicit default import rather than `import helmet from 'helmet'`.
-// Helmet is dual-published and its exports map has no `types` condition, so a
-// type-checker that resolves it as CJS can hand back the module namespace
-// instead of the callable — which is what Vercel's Express builder does, and
-// why this compiled locally but failed there. Naming `default` works under both
-// resolutions, and helmet's CJS entry sets `module.exports.default` to itself,
-// so it is the same function at runtime either way.
-import { default as helmet } from 'helmet';
+import express, { type Express, type RequestHandler } from 'express';
+import * as helmetModule from 'helmet';
 import { pinoHttp } from 'pino-http';
 import { env } from './config/env.js';
 import { safeEqual } from './lib/crypto.js';
@@ -22,6 +15,33 @@ import { apiRouter } from './routes.js';
 import { pruneRefreshTokens } from './modules/auth/auth.service.js';
 import { runDeadlineSweep } from './jobs/deadlines.js';
 import { getBot, startBot, telegramWebhookHandler } from './telegram/bot.js';
+
+/**
+ * Helmet, resolved at runtime rather than by the type-checker.
+ *
+ * Helmet is dual-published and its `exports` map declares no `types`
+ * condition, so checkers disagree about whether the module *is* the middleware
+ * factory or merely *contains* it. `tsc` with this project's config sees the
+ * ESM declarations and a callable default; Vercel's Express builder, which
+ * type-checks `src/app.ts` with its own settings, sees a namespace with
+ * neither — so `helmet(...)` and `{ default as helmet }` both failed to build
+ * there while passing locally.
+ *
+ * Both shapes are correct at runtime: helmet's CJS entry ends with
+ * `module.exports.default = module.exports`, so the module and its `default`
+ * are the same function. Picking whichever is callable sidesteps the
+ * disagreement entirely. The cost is that helmet's own `HelmetOptions` type no
+ * longer guards the call, so the options below are checked by hand.
+ */
+type HelmetOptions = Record<string, unknown>;
+type HelmetFactory = (options?: HelmetOptions) => RequestHandler;
+
+const helmet: HelmetFactory = (() => {
+  const candidate = helmetModule as unknown as { default?: unknown };
+  return (typeof candidate.default === 'function'
+    ? candidate.default
+    : helmetModule) as HelmetFactory;
+})();
 
 export const createApp = (): Express => {
   const app = express();
