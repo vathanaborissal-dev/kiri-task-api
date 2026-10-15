@@ -19,3 +19,4 @@ prisma/*.db
 .ai/
 ai-artifacts/
 *.ai-generated.*
+
