@@ -20,3 +20,5 @@ prisma/*.db
 ai-artifacts/
 *.ai-generated.*
 
+.vercel
+.env*
