@@ -3,7 +3,14 @@ import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express, { type Express } from 'express';
-import helmet from 'helmet';
+// Explicit default import rather than `import helmet from 'helmet'`.
+// Helmet is dual-published and its exports map has no `types` condition, so a
+// type-checker that resolves it as CJS can hand back the module namespace
+// instead of the callable — which is what Vercel's Express builder does, and
+// why this compiled locally but failed there. Naming `default` works under both
+// resolutions, and helmet's CJS entry sets `module.exports.default` to itself,
+// so it is the same function at runtime either way.
+import { default as helmet } from 'helmet';
 import { pinoHttp } from 'pino-http';
 import { env } from './config/env.js';
 import { safeEqual } from './lib/crypto.js';
