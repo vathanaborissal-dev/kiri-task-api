@@ -1,8 +1,10 @@
 import { Bot, GrammyError, HttpError, InlineKeyboard, webhookCallback } from 'grammy';
+import type { Transformer } from 'grammy';
 import { env } from '../config/env.js';
 import { logger } from '../lib/logger.js';
 import { registerTelegramSender, type TelegramMessage } from '../services/channels.js';
 import { registerActions } from './actions.js';
+import { menuCommands } from './catalog.js';
 import { miniAppUrl } from './format.js';
 import { registerCommands } from './commands.js';
 import { prunePending } from './state.js';
@@ -29,9 +31,47 @@ let conflictReported = false;
 export const getBot = (): Bot | null => bot;
 export const telegramReceivingUpdates = () => receivingUpdates;
 
+/** Methods whose text Telegram parses, and will reject whole if it cannot. */
+const FORMATTED_METHODS = new Set(['sendMessage', 'editMessageText']);
+
+const PARSE_FAILURE = /can't parse entities/i;
+
+/** Undoes MarkdownV2 escaping, so a fallback send reads as plain prose. */
+const unescape = (value: string): string =>
+  value.replace(/\\([_*[\]()~`>#+\-=|{}.!\\])/g, '$1');
+
+/**
+ * Sends the message anyway when Telegram rejects the formatting.
+ *
+ * One unescaped character makes Telegram refuse the entire message, so a
+ * single stray dot in a reply does not come out unformatted — it does not come
+ * out at all. From the chat that is indistinguishable from a bot that has
+ * stopped working, and it is how four of these replies behaved for months.
+ *
+ * Formatting is never worth the message, so a parse failure is retried once as
+ * plain text and logged loudly enough to be fixed properly.
+ */
+const sendAnywayOnParseFailure: Transformer = async (prev, method, payload, signal) => {
+  const result = await prev(method, payload, signal);
+  if (result.ok || !FORMATTED_METHODS.has(method)) return result;
+  if (!PARSE_FAILURE.test(result.description ?? '')) return result;
+
+  const text = (payload as { text?: string }).text;
+  if (typeof text !== 'string') return result;
+
+  logger.error(
+    { method, description: result.description, text },
+    'Telegram rejected the formatting of a message; resending it as plain text',
+  );
+
+  const { parse_mode: _parseMode, entities: _entities, ...rest } = payload as Record<string, unknown>;
+  return prev(method, { ...rest, text: unescape(text) } as typeof payload, signal);
+};
+
 /** Builds a fully wired bot without starting it — the test harness uses this. */
 export const createBot = (token = env.TELEGRAM_BOT_TOKEN!): Bot => {
   const instance = new Bot(token);
+  instance.api.config.use(sendAnywayOnParseFailure);
 
   registerCommands(instance);
   registerActions(instance);
@@ -142,20 +182,7 @@ export const startBot = async (): Promise<void> => {
   }, 5 * 60 * 1000);
   pruneTimer.unref();
 
-  await bot.api.setMyCommands([
-    { command: 'mytasks', description: 'My open tasks' },
-    { command: 'today', description: "Today's work and deadlines" },
-    { command: 'overdue', description: 'Overdue tasks and issues' },
-    { command: 'issues', description: 'Issues assigned to me' },
-    { command: 'alltasks', description: 'Every open task I can see' },
-    { command: 'allissues', description: 'Every open issue I can see' },
-    { command: 'hotfixes', description: 'Hotfixes in flight' },
-    { command: 'projects', description: 'Projects I can access' },
-    { command: 'report', description: 'Report an issue' },
-    { command: 'app', description: 'Open Kiri Task' },
-    { command: 'me', description: 'My account' },
-    { command: 'help', description: 'Show available commands' },
-  ]);
+  await bot.api.setMyCommands(menuCommands());
 
   // The blue button next to the message box opens Kiri Task inside Telegram.
   // Telegram only accepts an https origin for a Mini App, so a local

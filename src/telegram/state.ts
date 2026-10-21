@@ -49,9 +49,11 @@ export const getPending = async (chatId: number | bigint): Promise<PendingAction
 };
 
 export const clearPending = async (chatId: number | bigint) => {
-  await prisma.telegramPending
-    .delete({ where: { chatId: BigInt(chatId) } })
-    .catch(() => undefined);
+  // `deleteMany` rather than `delete`: clearing a chat that has no draft is
+  // the normal case — an expired comment, a /cancel typed out of habit — and
+  // `delete` treats a missing row as a failure, logging a Prisma error each
+  // time even though the caller swallows it.
+  await prisma.telegramPending.deleteMany({ where: { chatId: BigInt(chatId) } });
 };
 
 /** Housekeeping, so abandoned drafts do not pile up. */

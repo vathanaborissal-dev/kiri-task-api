@@ -1,6 +1,7 @@
 import { env } from '../config/env.js';
 import { formatDate } from '../lib/dates.js';
 import type { InlineKeyboard } from 'grammy';
+import { COMMAND_GROUPS } from './catalog.js';
 
 /** Telegram MarkdownV2 requires every reserved character to be escaped. */
 export const esc = (value: string | null | undefined): string =>
@@ -120,32 +121,67 @@ export const issueLine = (issue: IssueLine, timezone?: string): string => {
   const due = issue.dueDate ? ` · ${esc(formatDate(issue.dueDate, timezone))}` : '';
   return (
     `${SEVERITY_ICON[issue.severity] ?? '•'} *${esc(issue.key)}* ${esc(issue.title)}\n` +
-    `   ${esc(issue.status.replace(/_/g, ' '))}${issue.phase ? ` · ${esc(issue.phase.name)}` : ''}${due}`
+    `   ${esc(humanStatus(issue.status))}${issue.phase ? ` · ${esc(issue.phase.name)}` : ''}${due}`
   );
 };
 
 export const sectionHeader = (title: string, count?: number) =>
   `*${esc(title)}*${count !== undefined ? esc(` (${count})`) : ''}`;
 
-export const HELP_TEXT = [
-  '*Kiri Task bot*',
-  '',
-  'Commands:',
-  '/mytasks — your open tasks',
-  '/today — what is due today',
-  '/overdue — anything past its deadline',
-  '/issues — issues assigned to you',
-  '',
-  '*The whole team:*',
-  '/alltasks — every open task you can see',
-  '/allissues — every open issue you can see',
-  '/hotfixes — hotfixes in flight',
-  '',
-  '/projects — projects you can access',
-  '/report — report an issue, with an optional screenshot',
-  '/app — open Kiri Task',
-  '/me — your account and notification status',
-  '/help — show this message',
-  '',
-  'Buttons on a notification let you start a task, mark it done, comment, or open it in the web app\\. Everything you do here follows the same permissions as the website\\.',
-].join('\n');
+/**
+ * `/help`, built from the one command list so it cannot fall behind the bot.
+ *
+ * Escaped at the edges rather than written pre-escaped: a description is
+ * ordinary prose and should read like it in the source.
+ */
+export const helpText = (): string => {
+  const sections = COMMAND_GROUPS.flatMap((group) => {
+    const visible = group.commands.filter((command) => !command.hidden);
+    if (visible.length === 0) return [];
+    return [
+      [
+        ...(group.heading ? [`*${esc(group.heading)}*`] : []),
+        ...visible.map((command) => `/${command.name} \u2014 ${esc(command.description)}`),
+      ].join('\n'),
+    ];
+  });
+
+  return [
+    '*Kiri Task bot*',
+    ...sections,
+    esc('Send a key like ACS-12, ACS-I3 or ACS-HF1 and I will pull that item up.'),
+    esc(
+      'Buttons on a notification let you start a task, mark it done, comment, or open it in the web app. Everything you do here follows the same permissions as the website.',
+    ),
+  ].join('\n\n');
+};
+
+/**
+ * Says what a capped list left out.
+ *
+ * The lists take a fixed number of rows so a phone can scan them, and the
+ * header counts everything that matched — without this line the two disagree
+ * and the list quietly looks like the whole truth.
+ */
+export const truncationNote = (shown: number, total: number): string | null =>
+  total > shown ? esc(`Showing ${shown} of ${total} — open Kiri Task for the rest.`) : null;
+
+export type HotfixLine = {
+  key: string;
+  title: string;
+  severity: string;
+  status: string;
+};
+
+export const hotfixLine = (hotfix: HotfixLine): string =>
+  `${SEVERITY_ICON[hotfix.severity] ?? '•'} *${esc(hotfix.key)}* ${esc(hotfix.title)}\n` +
+  `   ${esc(hotfix.status.replace(/_/g, ' ').toLowerCase())}`;
+
+/**
+ * An enum name as a person would write it.
+ *
+ * `WONT_FIX` lowercases to "wont fix", which reads as a typo rather than a
+ * status, so the one value that needs an apostrophe gets one.
+ */
+export const humanStatus = (value: string): string =>
+  value === 'WONT_FIX' ? "won't fix" : value.replace(/_/g, ' ').toLowerCase();

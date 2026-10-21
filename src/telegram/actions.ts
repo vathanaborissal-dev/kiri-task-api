@@ -3,8 +3,11 @@ import { env } from '../config/env.js';
 import { AppError } from '../lib/errors.js';
 import { logger } from '../lib/logger.js';
 import { prisma } from '../lib/prisma.js';
+import type { AuthContext } from '../services/authContext.js';
 import type { IssueStatus, Severity } from '../generated/prisma/enums.js';
 import * as fmt from './format.js';
+import { findByKey, parseItemKey, type ItemKind } from './lookup.js';
+import { menuFor } from './menus.js';
 import * as mut from './mutations.js';
 import { authForChat } from './service.js';
 import { clearPending, getPending, setPending } from './state.js';
@@ -34,115 +37,82 @@ const guard = async (ctx: Context, fn: () => Promise<void>) => {
   }
 };
 
-const taskMenuKeyboard = (taskId: string, projectKey: string, taskKey: string) => {
-  const keyboard = new InlineKeyboard()
-    .text('▶️ In progress', `task:start:${taskId}`)
-    .text('✅ Done', `task:done:${taskId}`)
-    .row()
-    .text('💬 Comment', `task:comment:${taskId}`);
-  return fmt.addOpenButton(
-    keyboard,
-    'Open in Kiri Task',
-    `/projects/${projectKey}/tasks/${taskKey}`,
-  );
+const requireAuth = async (ctx: Context): Promise<AuthContext> => {
+  const auth = await authForChat(ctx.chat!.id);
+  if (!auth) throw new AppError(401, 'UNAUTHORIZED', 'Connect your account first with /start');
+  return auth;
 };
 
-const issueMenuKeyboard = (issueId: string, projectKey: string, issueKey: string) => {
-  const keyboard = new InlineKeyboard()
-    .text('▶️ Start', `issue:start:${issueId}`)
-    .text('🧪 Ready to test', `issue:testing:${issueId}`)
-    .row()
-    .text('✅ Resolve', `issue:resolve:${issueId}`)
-    .text('💬 Comment', `issue:comment:${issueId}`);
-  return fmt.addOpenButton(
-    keyboard,
-    'Open in Kiri Task',
-    `/projects/${projectKey}/issues/${issueKey}`,
-  );
+/** Sends the card for one item, with the buttons that act on it. */
+const sendMenu = async (ctx: Context, auth: AuthContext, kind: ItemKind, id: string) => {
+  const menu = await menuFor(kind)(auth, id);
+  await ctx.reply(menu.text, { ...md, reply_markup: menu.reply_markup });
+};
+
+/**
+ * Replaces the message a button lives on with the item as it now stands.
+ *
+ * Whatever the message was — a card, an overdue warning, a request for
+ * approval — it was about this one item, and once somebody has acted the
+ * buttons under it describe a state that has passed. Redrawing keeps the
+ * message and its buttons honest; a toast that has already faded does not.
+ *
+ * Telegram refuses to edit a message older than 48 hours, and refuses an edit
+ * that changes nothing, so a failure here is expected and silent.
+ */
+const refreshCard = async (ctx: Context, auth: AuthContext, kind: ItemKind, id: string) => {
+  if (!ctx.callbackQuery?.message) return;
+  try {
+    const menu = await menuFor(kind)(auth, id);
+    await ctx.editMessageText(menu.text, { ...md, reply_markup: menu.reply_markup });
+  } catch {
+    /* the toast already said what happened */
+  }
 };
 
 export const registerActions = (bot: Bot) => {
+  // --- Opening one item ----------------------------------------------------
+
+  const menuAction = (kind: ItemKind) =>
+    bot.callbackQuery(new RegExp(`^${kind}:menu:(.+)$`), async (ctx) =>
+      guard(ctx, async () => {
+        const auth = await requireAuth(ctx);
+        await ctx.answerCallbackQuery();
+        await sendMenu(ctx, auth, kind, ctx.match[1]!);
+      }),
+    );
+
+  menuAction('task');
+  menuAction('issue');
+  menuAction('hotfix');
+
   // --- Task actions --------------------------------------------------------
 
-  bot.callbackQuery(/^task:menu:(.+)$/, async (ctx) =>
-    guard(ctx, async () => {
-      const auth = await authForChat(ctx.chat!.id);
-      if (!auth) throw new AppError(401, 'UNAUTHORIZED', 'Connect your account first with /start');
-      const taskId = ctx.match[1]!;
+  const taskStatusAction = (
+    pattern: RegExp,
+    category: 'IN_PROGRESS' | 'DONE',
+    already: string,
+  ) =>
+    bot.callbackQuery(pattern, async (ctx) =>
+      guard(ctx, async () => {
+        const auth = await requireAuth(ctx);
+        const taskId = ctx.match[1]!;
+        const result = await mut.moveTaskToCategory(auth, taskId, category);
+        await ctx.answerCallbackQuery({
+          text: result.unchanged
+            ? `${result.task.key} is already ${already}`
+            : `${category === 'DONE' ? '✅ ' : ''}${result.task.key} → ${result.status.name}`,
+        });
+        await refreshCard(ctx, auth, 'task', taskId);
+      }),
+    );
 
-      const task = await prisma.task.findUnique({
-        where: { id: taskId },
-        select: {
-          id: true,
-          key: true,
-          title: true,
-          description: true,
-          priority: true,
-          dueDate: true,
-          qaStatus: true,
-          projectId: true,
-          status: { select: { name: true, category: true } },
-          phase: { select: { name: true } },
-          project: { select: { key: true } },
-          assignees: { select: { user: { select: { name: true } } } },
-          _count: { select: { subtasks: true, comments: true } },
-        },
-      });
-      if (!task) throw new AppError(404, 'NOT_FOUND', 'Task not found');
-      await auth.requireProject(task.projectId, 'task:view');
-
-      const lines = [
-        `${fmt.PRIORITY_ICON[task.priority] ?? '•'} *${fmt.esc(task.key)}* ${fmt.esc(task.title)}`,
-        '',
-        `Status: ${fmt.esc(task.status.name)}`,
-        task.phase ? `Phase: ${fmt.esc(task.phase.name)}` : null,
-        `Testing: ${fmt.esc(task.qaStatus.replace(/_/g, ' ').toLowerCase())}`,
-        task.dueDate ? `Due: ${fmt.esc(task.dueDate.toDateString())}` : null,
-        task.assignees.length
-          ? `Assigned: ${fmt.esc(task.assignees.map((a) => a.user.name).join(', '))}`
-          : 'Unassigned',
-        task._count.subtasks ? `Subtasks: ${task._count.subtasks}` : null,
-        task.description ? `\n${fmt.esc(task.description.slice(0, 500))}` : null,
-      ].filter(Boolean);
-
-      await ctx.answerCallbackQuery();
-      await ctx.reply(lines.join('\n'), {
-        ...md,
-        reply_markup: taskMenuKeyboard(task.id, task.project.key, task.key),
-      });
-    }),
-  );
-
-  bot.callbackQuery(/^task:start:(.+)$/, async (ctx) =>
-    guard(ctx, async () => {
-      const auth = await authForChat(ctx.chat!.id);
-      if (!auth) throw new AppError(401, 'UNAUTHORIZED', 'Connect your account first with /start');
-      const result = await mut.moveTaskToCategory(auth, ctx.match[1]!, 'IN_PROGRESS');
-      await ctx.answerCallbackQuery({
-        text: result.unchanged
-          ? `${result.task.key} is already in progress`
-          : `${result.task.key} → ${result.status.name}`,
-      });
-    }),
-  );
-
-  bot.callbackQuery(/^task:done:(.+)$/, async (ctx) =>
-    guard(ctx, async () => {
-      const auth = await authForChat(ctx.chat!.id);
-      if (!auth) throw new AppError(401, 'UNAUTHORIZED', 'Connect your account first with /start');
-      const result = await mut.moveTaskToCategory(auth, ctx.match[1]!, 'DONE');
-      await ctx.answerCallbackQuery({
-        text: result.unchanged
-          ? `${result.task.key} is already done`
-          : `✅ ${result.task.key} marked ${result.status.name}`,
-      });
-    }),
-  );
+  taskStatusAction(/^task:start:(.+)$/, 'IN_PROGRESS', 'in progress');
+  taskStatusAction(/^task:done:(.+)$/, 'DONE', 'done');
 
   bot.callbackQuery(/^task:comment:(.+)$/, async (ctx) =>
     guard(ctx, async () => {
-      const auth = await authForChat(ctx.chat!.id);
-      if (!auth) throw new AppError(401, 'UNAUTHORIZED', 'Connect your account first with /start');
+      const auth = await requireAuth(ctx);
       const taskId = ctx.match[1]!;
       const task = await prisma.task.findUnique({
         where: { id: taskId },
@@ -153,80 +123,35 @@ export const registerActions = (bot: Bot) => {
 
       await setPending(ctx.chat!.id, { kind: 'comment', entity: 'task', id: taskId });
       await ctx.answerCallbackQuery();
-      await ctx.reply(
-        `Send your comment for *${fmt.esc(task.key)}*, or /cancel to stop\\.`,
-        md,
-      );
+      await ctx.reply(`Send your comment for *${fmt.esc(task.key)}*, or /cancel to stop\\.`, md);
     }),
   );
 
   // --- Issue actions -------------------------------------------------------
 
-  bot.callbackQuery(/^issue:menu:(.+)$/, async (ctx) =>
-    guard(ctx, async () => {
-      const auth = await authForChat(ctx.chat!.id);
-      if (!auth) throw new AppError(401, 'UNAUTHORIZED', 'Connect your account first with /start');
-      const issue = await prisma.issue.findUnique({
-        where: { id: ctx.match[1]! },
-        select: {
-          id: true,
-          key: true,
-          title: true,
-          description: true,
-          severity: true,
-          status: true,
-          dueDate: true,
-          projectId: true,
-          phase: { select: { name: true } },
-          project: { select: { key: true } },
-          assignee: { select: { name: true } },
-          reporter: { select: { name: true } },
-        },
-      });
-      if (!issue) throw new AppError(404, 'NOT_FOUND', 'Issue not found');
-      await auth.requireProject(issue.projectId, 'issue:view');
-
-      const lines = [
-        `${fmt.SEVERITY_ICON[issue.severity] ?? '•'} *${fmt.esc(issue.key)}* ${fmt.esc(issue.title)}`,
-        '',
-        `Status: ${fmt.esc(issue.status.replace(/_/g, ' '))}`,
-        `Severity: ${fmt.esc(issue.severity.toLowerCase())}`,
-        issue.phase ? `Environment: ${fmt.esc(issue.phase.name)}` : null,
-        `Reported by: ${fmt.esc(issue.reporter.name)}`,
-        issue.assignee ? `Assigned: ${fmt.esc(issue.assignee.name)}` : 'Unassigned',
-        issue.description ? `\n${fmt.esc(issue.description.slice(0, 500))}` : null,
-      ].filter(Boolean);
-
-      await ctx.answerCallbackQuery();
-      await ctx.reply(lines.join('\n'), {
-        ...md,
-        reply_markup: issueMenuKeyboard(issue.id, issue.project.key, issue.key),
-      });
-    }),
-  );
-
   const issueStatusAction = (pattern: RegExp, status: IssueStatus, label: string) =>
     bot.callbackQuery(pattern, async (ctx) =>
       guard(ctx, async () => {
-        const auth = await authForChat(ctx.chat!.id);
-        if (!auth) throw new AppError(401, 'UNAUTHORIZED', 'Connect your account first with /start');
-        const result = await mut.setIssueStatus(auth, ctx.match[1]!, status);
+        const auth = await requireAuth(ctx);
+        const issueId = ctx.match[1]!;
+        const result = await mut.setIssueStatus(auth, issueId, status);
         await ctx.answerCallbackQuery({
           text: result.unchanged
             ? `${result.issue.key} is already ${label}`
             : `${result.issue.key} → ${label}`,
         });
+        await refreshCard(ctx, auth, 'issue', issueId);
       }),
     );
 
   issueStatusAction(/^issue:start:(.+)$/, 'IN_PROGRESS', 'in progress');
   issueStatusAction(/^issue:testing:(.+)$/, 'READY_FOR_TESTING', 'ready for testing');
   issueStatusAction(/^issue:resolve:(.+)$/, 'RESOLVED', 'resolved');
+  issueStatusAction(/^issue:reopen:(.+)$/, 'REOPENED', 'reopened');
 
   bot.callbackQuery(/^issue:comment:(.+)$/, async (ctx) =>
     guard(ctx, async () => {
-      const auth = await authForChat(ctx.chat!.id);
-      if (!auth) throw new AppError(401, 'UNAUTHORIZED', 'Connect your account first with /start');
+      const auth = await requireAuth(ctx);
       const issueId = ctx.match[1]!;
       const issue = await prisma.issue.findUnique({
         where: { id: issueId },
@@ -246,8 +171,7 @@ export const registerActions = (bot: Bot) => {
   const hotfixDecision = (pattern: RegExp, approve: boolean) =>
     bot.callbackQuery(pattern, async (ctx) =>
       guard(ctx, async () => {
-        const auth = await authForChat(ctx.chat!.id);
-        if (!auth) throw new AppError(401, 'UNAUTHORIZED', 'Connect your account first with /start');
+        const auth = await requireAuth(ctx);
         const hotfixId = ctx.match[1]!;
         const hotfix = await prisma.hotfix.findUnique({
           where: { id: hotfixId },
@@ -255,6 +179,7 @@ export const registerActions = (bot: Bot) => {
             id: true,
             key: true,
             title: true,
+            status: true,
             projectId: true,
             requestedById: true,
             assigneeId: true,
@@ -264,11 +189,20 @@ export const registerActions = (bot: Bot) => {
         if (!hotfix) throw new AppError(404, 'NOT_FOUND', 'Hotfix not found');
         await auth.requireProject(hotfix.projectId, 'hotfix:approve');
 
+        // Two people can be looking at the same approval request. Whoever gets
+        // there second should be told what happened, not silently overrule it.
+        if (hotfix.status !== 'REQUESTED') {
+          await ctx.answerCallbackQuery({
+            text: `${hotfix.key} was already ${hotfix.status.toLowerCase().replace(/_/g, ' ')}`,
+            show_alert: true,
+          });
+          await refreshCard(ctx, auth, 'hotfix', hotfixId);
+          return;
+        }
+
         await prisma.hotfix.update({
           where: { id: hotfix.id },
-          data: approve
-            ? { status: 'APPROVED', approvedAt: new Date() }
-            : { status: 'REJECTED' },
+          data: approve ? { status: 'APPROVED', approvedAt: new Date() } : { status: 'REJECTED' },
         });
 
         const { logActivity } = await import('../services/activity.js');
@@ -298,6 +232,7 @@ export const registerActions = (bot: Bot) => {
         await ctx.answerCallbackQuery({
           text: `${hotfix.key} ${approve ? 'approved' : 'rejected'}`,
         });
+        await refreshCard(ctx, auth, 'hotfix', hotfixId);
       }),
     );
 
@@ -308,8 +243,7 @@ export const registerActions = (bot: Bot) => {
 
   bot.callbackQuery('report:start', async (ctx) =>
     guard(ctx, async () => {
-      const auth = await authForChat(ctx.chat!.id);
-      if (!auth) throw new AppError(401, 'UNAUTHORIZED', 'Connect your account first with /start');
+      const auth = await requireAuth(ctx);
 
       const projectIds = await auth.projectIdsWith('issue:create');
       const projects = await prisma.project.findMany({
@@ -336,8 +270,7 @@ export const registerActions = (bot: Bot) => {
 
   bot.callbackQuery(/^report:project:(.+)$/, async (ctx) =>
     guard(ctx, async () => {
-      const auth = await authForChat(ctx.chat!.id);
-      if (!auth) throw new AppError(401, 'UNAUTHORIZED', 'Connect your account first with /start');
+      const auth = await requireAuth(ctx);
       const projectId = ctx.match[1]!;
       const access = await auth.requireProject(projectId, 'issue:create');
 
@@ -358,8 +291,7 @@ export const registerActions = (bot: Bot) => {
 
   bot.callbackQuery(/^report:severity:(.+)$/, async (ctx) =>
     guard(ctx, async () => {
-      const auth = await authForChat(ctx.chat!.id);
-      if (!auth) throw new AppError(401, 'UNAUTHORIZED', 'Connect your account first with /start');
+      await requireAuth(ctx);
 
       const pending = await getPending(ctx.chat!.id);
       if (!pending || pending.kind !== 'report:details') {
@@ -388,8 +320,7 @@ export const registerActions = (bot: Bot) => {
 
   bot.callbackQuery(/^report:phase:(.+)$/, async (ctx) =>
     guard(ctx, async () => {
-      const auth = await authForChat(ctx.chat!.id);
-      if (!auth) throw new AppError(401, 'UNAUTHORIZED', 'Connect your account first with /start');
+      const auth = await requireAuth(ctx);
 
       const pending = await getPending(ctx.chat!.id);
       if (!pending || pending.kind !== 'report:details') {
@@ -437,6 +368,7 @@ export const registerActions = (bot: Bot) => {
     guard(ctx, async () => {
       await clearPending(ctx.chat!.id);
       await ctx.answerCallbackQuery({ text: 'Thanks — the team has been notified.' });
+      await ctx.editMessageReplyMarkup().catch(() => undefined);
     }),
   );
 
@@ -447,15 +379,43 @@ export const registerActions = (bot: Bot) => {
 
     const pending = await getPending(ctx.chat.id);
 
-    // Nothing in flight. Say so — a message typed into a bot that answers with
-    // silence reads as "the bot is broken", which is how a draft that expired
-    // or outlived a restart used to look.
     if (!pending) {
       const auth = await authForChat(ctx.chat.id);
+      if (!auth) {
+        await ctx.reply(
+          'Link your Kiri Task account first with /start, then I can take comments and issue reports from here\\.',
+          md,
+        );
+        return;
+      }
+
+      // A key is the most natural thing anybody sends a project bot, so treat
+      // it as a request to see that item rather than as a stray message.
+      const parsed = parseItemKey(ctx.message.text);
+      if (parsed) {
+        const found = await findByKey(auth, parsed);
+        if (found.found) {
+          await sendMenu(ctx, auth, found.kind, found.id);
+          return;
+        }
+        await ctx.reply(
+          fmt.esc(`I could not find ${parsed.key}, or it is in a project you cannot open.`),
+          md,
+        );
+        return;
+      }
+
+      // Say something. A message typed into a bot that answers with silence
+      // reads as "the bot is broken", which is how a draft that expired or
+      // outlived a restart used to look.
       await ctx.reply(
-        auth
-          ? 'I was not expecting anything just now — that message has not been saved anywhere\.\n\nUse /mywork or /tasks and tap *💬 Comment* on an item, or /report to raise an issue\.'
-          : 'Link your Kiri Task account first with /start, then I can take comments and issue reports from here\.',
+        [
+          fmt.esc('I was not expecting anything just now — that message has not been saved.'),
+          '',
+          fmt.esc(
+            'Send a key like ACS-12 to pull that item up, /mytasks to see your work, or /report to raise an issue.',
+          ),
+        ].join('\n'),
         md,
       );
       return;
@@ -464,7 +424,7 @@ export const registerActions = (bot: Bot) => {
     const auth = await authForChat(ctx.chat.id);
     if (!auth) {
       await clearPending(ctx.chat.id);
-      await ctx.reply('Your account is not linked any more — run /start to link it again\.', md);
+      await ctx.reply('Your account is not linked any more — run /start to link it again\\.', md);
       return;
     }
 
@@ -546,8 +506,7 @@ export const registerActions = (bot: Bot) => {
       const file = await ctx.getFile();
       if (!file.file_path) throw new AppError(400, 'BAD_REQUEST', 'Could not read that file');
       const url = `https://api.telegram.org/file/bot${env.TELEGRAM_BOT_TOKEN}/${file.file_path}`;
-      const filename =
-        ctx.message.document?.file_name ?? `telegram-${file.file_unique_id}.jpg`;
+      const filename = ctx.message.document?.file_name ?? `telegram-${file.file_unique_id}.jpg`;
 
       await mut.attachTelegramFile(auth, {
         issueId: pending.issueId,

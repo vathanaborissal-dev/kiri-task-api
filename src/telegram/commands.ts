@@ -1,10 +1,12 @@
 import { type Bot, InlineKeyboard } from 'grammy';
-import { formatDate } from '../lib/dates.js';
+import type { Prisma } from '../generated/prisma/client.js';
+import { endOfToday, formatDate, startOfToday } from '../lib/dates.js';
 import { prisma } from '../lib/prisma.js';
 import * as fmt from './format.js';
 import { table } from './table.js';
+import { KNOWN_COMMANDS } from './catalog.js';
 import { authForChat, linkChat } from './service.js';
-import { clearPending, setPending } from './state.js';
+import { clearPending, getPending, setPending } from './state.js';
 
 const OPEN_ISSUE_STATUSES = ['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'READY_FOR_TESTING', 'REOPENED'] as const;
 
@@ -15,6 +17,29 @@ const NOT_LINKED = [
 ].join('\n');
 
 export const registerCommands = (bot: Bot) => {
+  /**
+   * The bot acts as whoever linked the chat, so in a group every member would
+   * be acting as that one person — filing their issues, closing their tasks.
+   * Rather than offer a connection code that would do exactly that, say where
+   * it does work. Ordinary group chatter is left alone.
+   */
+  bot.on('message', async (ctx, next) => {
+    if (ctx.chat.type === 'private') return next();
+    if (!ctx.message.text?.startsWith('/')) return;
+    await ctx.reply(
+      fmt.esc(
+        'I work in a direct message, not in a group — everything I do happens as the person I am connected to. Message me directly and send /start.',
+      ),
+      { parse_mode: 'MarkdownV2' },
+    );
+  });
+
+  /** A blank line and a note, when a list showed less than it found. */
+  const noteLines = (shown: number, total: number): string[] => {
+    const note = fmt.truncationNote(shown, total);
+    return note ? ['', note] : [];
+  };
+
   bot.command('start', async (ctx) => {
     const code = ctx.match?.trim();
 
@@ -22,7 +47,7 @@ export const registerCommands = (bot: Bot) => {
       const result = await linkChat(code, ctx.chat.id, ctx.from?.username);
       if (result.ok) {
         await ctx.reply(
-          `✅ Connected\\. Welcome, *${fmt.esc(result.name)}*\\.\n\n${fmt.HELP_TEXT}`,
+          `✅ Connected\\. Welcome, *${fmt.esc(result.name)}*\\.\n\n${fmt.helpText()}`,
           { parse_mode: 'MarkdownV2' },
         );
         return;
@@ -37,13 +62,13 @@ export const registerCommands = (bot: Bot) => {
       return;
     }
     await ctx.reply(
-      `You are signed in as *${fmt.esc(auth.user.name)}*\\.\n\n${fmt.HELP_TEXT}`,
+      `You are signed in as *${fmt.esc(auth.user.name)}*\\.\n\n${fmt.helpText()}`,
       { parse_mode: 'MarkdownV2' },
     );
   });
 
   bot.command('help', async (ctx) => {
-    await ctx.reply(fmt.HELP_TEXT, { parse_mode: 'MarkdownV2' });
+    await ctx.reply(fmt.helpText(), { parse_mode: 'MarkdownV2' });
   });
 
   /** Opens the web app — as a Mini App inside Telegram where that is possible. */
@@ -66,7 +91,7 @@ export const registerCommands = (bot: Bot) => {
     await ctx.reply(
       fmt.miniAppUrl()
         ? 'Open Kiri Task without leaving Telegram:'
-        : 'The web app link will appear here after Kiri Task is deployed\.',
+        : fmt.esc('The web app link will appear here once Kiri Task is deployed.'),
       {
         parse_mode: 'MarkdownV2',
         ...(fmt.openButton('Open', '/dashboard') ? { reply_markup: keyboard } : {}),
@@ -125,12 +150,14 @@ export const registerCommands = (bot: Bot) => {
     if (!auth) return void ctx.reply(NOT_LINKED, { parse_mode: 'MarkdownV2' });
 
     const projectIds = await auth.projectIdsWith('task:view');
+    const mine: Prisma.TaskWhereInput = {
+      projectId: { in: projectIds },
+      assignees: { some: { userId: auth.id } },
+      status: { category: { notIn: ['DONE', 'CANCELED'] } },
+    };
+    const total = await prisma.task.count({ where: mine });
     const tasks = await prisma.task.findMany({
-      where: {
-        projectId: { in: projectIds },
-        assignees: { some: { userId: auth.id } },
-        status: { category: { notIn: ['DONE', 'CANCELED'] } },
-      },
+      where: mine,
       orderBy: [{ dueDate: { sort: 'asc', nulls: 'last' } }, { priority: 'desc' }],
       take: 15,
       select: {
@@ -162,9 +189,10 @@ export const registerCommands = (bot: Bot) => {
 
     await ctx.reply(
       [
-        fmt.sectionHeader('Your open tasks', tasks.length),
+        fmt.sectionHeader('Your open tasks', total),
         '',
         ...tasks.map((t) => fmt.taskLine(t, auth.user.timezone)),
+        ...noteLines(tasks.length, total),
       ].join('\n'),
       { parse_mode: 'MarkdownV2', reply_markup: keyboard },
     );
@@ -175,12 +203,15 @@ export const registerCommands = (bot: Bot) => {
     if (!auth) return void ctx.reply(NOT_LINKED, { parse_mode: 'MarkdownV2' });
 
     const projectIds = await auth.projectIdsWith('task:view');
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    const end = new Date();
-    end.setHours(23, 59, 59, 999);
 
-    const [due, inProgress] = await Promise.all([
+    // In this person's day, not the server's. `setHours` reads whatever zone
+    // the process happens to run in — Asia/Phnom_Penh on a laptop, UTC on
+    // Vercel — which moved the boundary seven hours and quietly put evening
+    // work on the wrong day.
+    const start = startOfToday(auth.user.timezone);
+    const end = endOfToday(auth.user.timezone);
+
+    const [due, inProgress, overdue] = await Promise.all([
       prisma.task.findMany({
         where: {
           projectId: { in: projectIds },
@@ -216,6 +247,14 @@ export const registerCommands = (bot: Bot) => {
           project: { select: { key: true } },
         },
       }),
+      prisma.task.count({
+        where: {
+          projectId: { in: projectIds },
+          assignees: { some: { userId: auth.id } },
+          dueDate: { lt: start },
+          status: { category: { notIn: ['DONE', 'CANCELED'] } },
+        },
+      }),
     ]);
 
     const parts: string[] = [fmt.sectionHeader('Today')];
@@ -227,6 +266,14 @@ export const registerCommands = (bot: Bot) => {
     }
     if (due.length === 0 && inProgress.length === 0) {
       parts.push('', 'Nothing due today and nothing in progress\\.');
+    }
+    // Yesterday's work does not stop mattering at midnight. Without this a
+    // clear day reads as "nothing to do" while five things sit overdue.
+    if (overdue > 0) {
+      parts.push(
+        '',
+        fmt.esc(`⚠️ ${overdue} already overdue — see /overdue.`),
+      );
     }
 
     const keyboard = new InlineKeyboard();
@@ -307,12 +354,14 @@ export const registerCommands = (bot: Bot) => {
     if (!auth) return void ctx.reply(NOT_LINKED, { parse_mode: 'MarkdownV2' });
 
     const projectIds = await auth.projectIdsWith('issue:view');
+    const mine: Prisma.IssueWhereInput = {
+      projectId: { in: projectIds },
+      OR: [{ assigneeId: auth.id }, { reporterId: auth.id }],
+      status: { in: [...OPEN_ISSUE_STATUSES] },
+    };
+    const total = await prisma.issue.count({ where: mine });
     const issues = await prisma.issue.findMany({
-      where: {
-        projectId: { in: projectIds },
-        OR: [{ assigneeId: auth.id }, { reporterId: auth.id }],
-        status: { in: [...OPEN_ISSUE_STATUSES] },
-      },
+      where: mine,
       orderBy: [{ severity: 'desc' }, { createdAt: 'desc' }],
       take: 15,
       select: {
@@ -344,9 +393,10 @@ export const registerCommands = (bot: Bot) => {
 
     await ctx.reply(
       [
-        fmt.sectionHeader('Your issues', issues.length),
+        fmt.sectionHeader('Your issues', total),
         '',
         ...issues.map((i) => fmt.issueLine(i, auth.user.timezone)),
+        ...noteLines(issues.length, total),
       ].join('\n'),
       { parse_mode: 'MarkdownV2', reply_markup: keyboard },
     );
@@ -373,6 +423,17 @@ export const registerCommands = (bot: Bot) => {
     });
   };
 
+  /**
+   * Closes a table with what it left out and how to open a row.
+   *
+   * The tables are not tappable — twenty-five buttons would bury the list —
+   * so the way into a row is its key, which the bot now understands on its own.
+   */
+  const listFooter = (shown: number, total: number): string[] => {
+    const note = fmt.truncationNote(shown, total);
+    return ['', ...(note ? [note] : []), fmt.esc('Send a key to open one.')];
+  };
+
   // --- Everything, not just mine -------------------------------------------
   // `/mytasks` and `/issues` answer "what is on me". These answer "what is on
   // the team", scoped to the projects the caller may read, so the bot never
@@ -383,11 +444,13 @@ export const registerCommands = (bot: Bot) => {
     if (!auth) return void ctx.reply(NOT_LINKED, { parse_mode: 'MarkdownV2' });
 
     const projectIds = await auth.projectIdsWith('task:view');
+    const where: Prisma.TaskWhereInput = {
+      projectId: { in: projectIds },
+      status: { category: { notIn: ['DONE', 'CANCELED'] } },
+    };
+    const total = await prisma.task.count({ where });
     const tasks = await prisma.task.findMany({
-      where: {
-        projectId: { in: projectIds },
-        status: { category: { notIn: ['DONE', 'CANCELED'] } },
-      },
+      where,
       orderBy: [{ dueDate: { sort: 'asc', nulls: 'last' } }, { priority: 'desc' }],
       take: LIST_LIMIT,
       select: {
@@ -403,7 +466,7 @@ export const registerCommands = (bot: Bot) => {
 
     await ctx.reply(
       [
-        fmt.sectionHeader('All open tasks', tasks.length),
+        fmt.sectionHeader('All open tasks', total),
         '',
         table(
           [
@@ -416,11 +479,12 @@ export const registerCommands = (bot: Bot) => {
           tasks.map((t) => [
             t.key,
             t.title,
-            t.status.name,
+            t.status.name.toLowerCase(),
             t.assignees.map((a) => a.user.name.split(' ')[0]).join(', ') || '—',
             t.dueDate ? formatDate(t.dueDate, auth.user.timezone) : '—',
           ]),
         ),
+        ...listFooter(tasks.length, total),
       ].join('\n'),
       { parse_mode: 'MarkdownV2' },
     );
@@ -431,8 +495,13 @@ export const registerCommands = (bot: Bot) => {
     if (!auth) return void ctx.reply(NOT_LINKED, { parse_mode: 'MarkdownV2' });
 
     const projectIds = await auth.projectIdsWith('issue:view');
+    const where: Prisma.IssueWhereInput = {
+      projectId: { in: projectIds },
+      status: { in: [...OPEN_ISSUE_STATUSES] },
+    };
+    const total = await prisma.issue.count({ where });
     const issues = await prisma.issue.findMany({
-      where: { projectId: { in: projectIds }, status: { in: [...OPEN_ISSUE_STATUSES] } },
+      where,
       orderBy: [{ severity: 'desc' }, { createdAt: 'desc' }],
       take: LIST_LIMIT,
       select: {
@@ -448,7 +517,7 @@ export const registerCommands = (bot: Bot) => {
 
     await ctx.reply(
       [
-        fmt.sectionHeader('All open issues', issues.length),
+        fmt.sectionHeader('All open issues', total),
         '',
         table(
           [
@@ -461,11 +530,12 @@ export const registerCommands = (bot: Bot) => {
           issues.map((i) => [
             i.key,
             i.title,
-            i.severity,
-            i.status.replace(/_/g, ' '),
+            i.severity.toLowerCase(),
+            fmt.humanStatus(i.status),
             i.assignee?.name.split(' ')[0] ?? 'unassigned',
           ]),
         ),
+        ...listFooter(issues.length, total),
       ].join('\n'),
       { parse_mode: 'MarkdownV2' },
     );
@@ -476,11 +546,17 @@ export const registerCommands = (bot: Bot) => {
     if (!auth) return void ctx.reply(NOT_LINKED, { parse_mode: 'MarkdownV2' });
 
     const projectIds = await auth.projectIdsWith('hotfix:view');
+    const where: Prisma.HotfixWhereInput = {
+      projectId: { in: projectIds },
+      status: { in: [...OPEN_HOTFIX_STATUSES] },
+    };
+    const total = await prisma.hotfix.count({ where });
     const hotfixes = await prisma.hotfix.findMany({
-      where: { projectId: { in: projectIds }, status: { in: [...OPEN_HOTFIX_STATUSES] } },
+      where,
       orderBy: [{ severity: 'desc' }, { createdAt: 'desc' }],
       take: LIST_LIMIT,
       select: {
+        id: true,
         key: true,
         title: true,
         severity: true,
@@ -491,9 +567,17 @@ export const registerCommands = (bot: Bot) => {
 
     if (hotfixes.length === 0) return void emptyNotice(ctx, 'hotfixes in flight');
 
+    // A hotfix waiting on approval is the one thing here that is urgent, so the
+    // first few are one tap from the card that can approve them.
+    const keyboard = new InlineKeyboard();
+    hotfixes.slice(0, 6).forEach((hotfix, index) => {
+      keyboard.text(hotfix.key, `hotfix:menu:${hotfix.id}`);
+      if (index % 3 === 2) keyboard.row();
+    });
+
     await ctx.reply(
       [
-        fmt.sectionHeader('Hotfixes in flight', hotfixes.length),
+        fmt.sectionHeader('Hotfixes in flight', total),
         '',
         table(
           [
@@ -506,13 +590,14 @@ export const registerCommands = (bot: Bot) => {
           hotfixes.map((h) => [
             h.key,
             h.title,
-            h.severity,
-            h.status.replace(/_/g, ' '),
+            h.severity.toLowerCase(),
+            fmt.humanStatus(h.status),
             h.assignee?.name.split(' ')[0] ?? 'unassigned',
           ]),
         ),
+        ...listFooter(hotfixes.length, total),
       ].join('\n'),
-      { parse_mode: 'MarkdownV2' },
+      { parse_mode: 'MarkdownV2', reply_markup: keyboard },
     );
   });
 
@@ -599,27 +684,23 @@ export const registerCommands = (bot: Bot) => {
   });
 
   bot.command('cancel', async (ctx) => {
+    // Saying "Cancelled." when nothing was in progress leaves people wondering
+    // what they just cancelled.
+    const pending = await getPending(ctx.chat.id);
     await clearPending(ctx.chat.id);
-    await ctx.reply('Cancelled\\.', { parse_mode: 'MarkdownV2' });
+    await ctx.reply(
+      pending ? 'Cancelled\\.' : fmt.esc('Nothing was in progress — nothing to cancel.'),
+      { parse_mode: 'MarkdownV2' },
+    );
   });
 
   // Unknown command — point people at /help rather than staying silent.
   bot.on('message:text', async (ctx, next) => {
     if (!ctx.message.text.startsWith('/')) return next();
-    const known = [
-      '/start',
-      '/help',
-      '/me',
-      '/mytasks',
-      '/today',
-      '/overdue',
-      '/issues',
-      '/projects',
-      '/report',
-      '/cancel',
-    ];
     const command = ctx.message.text.split(/[\s@]/)[0];
-    if (command && known.includes(command)) return next();
-    await ctx.reply(`Unknown command\\. Try /help\\.`, { parse_mode: 'MarkdownV2' });
+    if (command && KNOWN_COMMANDS.has(command)) return next();
+    await ctx.reply(fmt.esc(`Unknown command ${command}. Try /help.`), {
+      parse_mode: 'MarkdownV2',
+    });
   });
 };

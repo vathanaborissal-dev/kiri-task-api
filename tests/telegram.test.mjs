@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
 import { createBot } from '../src/telegram/bot.ts';
+import { ALL_COMMANDS } from '../src/telegram/catalog.ts';
 import { prisma } from '../src/lib/prisma.ts';
 import { signIn, unique } from './helpers.mjs';
 
@@ -79,10 +80,53 @@ const callbackUpdate = (data) => ({
   },
 });
 
+
+/**
+ * Telegram refuses a whole message when one reserved character is not escaped,
+ * so a formatting slip does not come out plain — it does not come out at all.
+ * Four replies shipped that way because the fake transport here accepted
+ * anything. Every message the suite provokes is now checked.
+ *
+ * Only the characters that MarkdownV2 never uses for formatting are checked,
+ * which is where the mistake is always made: `*`, `_`, `[`, `]`, `(` and `)`
+ * are left alone because they carry bold, italics and links.
+ */
+const MUST_BE_ESCAPED = /[.!+=|{}>#~-]/;
+
+const stripCode = (text) => text.replace(/```[\s\S]*?```/g, '').replace(/`[^`]*`/g, '');
+
+const unescapedAt = (text) => {
+  const body = stripCode(text);
+  for (let index = 0; index < body.length; index += 1) {
+    const char = body[index];
+    if (!MUST_BE_ESCAPED.test(char)) continue;
+    let slashes = 0;
+    for (let back = index - 1; back >= 0 && body[back] === '\\'; back -= 1) slashes += 1;
+    if (slashes % 2 === 0) return { char, index, near: body.slice(Math.max(0, index - 40), index + 10) };
+  }
+  return null;
+};
+
+const assertParsable = (calls) => {
+  for (const call of calls) {
+    if (call.method !== 'sendMessage' && call.method !== 'editMessageText') continue;
+    if (call.payload.parse_mode !== 'MarkdownV2') continue;
+    const bad = unescapedAt(call.payload.text ?? '');
+    assert.equal(
+      bad,
+      null,
+      bad
+        ? `Telegram would reject this message: unescaped "${bad.char}" after …${bad.near}`
+        : '',
+    );
+  }
+};
+
 /** Feeds an update and returns everything the bot tried to send because of it. */
 const feed = async (update) => {
   sent = [];
   await bot.handleUpdate(update);
+  assertParsable(sent);
   return sent;
 };
 
@@ -462,6 +506,100 @@ describe('reporting an issue from Telegram', () => {
 
     const stray = allText(await feed(textUpdate('this should go nowhere')));
     assert.ok(!/Reported as/i.test(stray));
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+describe('finding and following work', () => {
+  it('opens an item when its key is sent on its own', async () => {
+    const reply = allText(await feed(textUpdate(task.key)));
+    assert.ok(reply.includes(task.key.replace(/-/g, '\\-')), 'the card should name the task');
+    assert.match(reply, /Status:/);
+  });
+
+  it('finds a key written inside a sentence', async () => {
+    const reply = allText(await feed(textUpdate(`any news on ${task.key}?`)));
+    assert.ok(reply.includes(task.key.replace(/-/g, '\\-')));
+  });
+
+  it('says so for a key that does not exist', async () => {
+    const reply = allText(await feed(textUpdate('NOPE-404')));
+    assert.match(reply, /could not find/i);
+  });
+
+  it('answers /app instead of failing to send', async () => {
+    // This reply carried an unescaped full stop, so Telegram rejected it and
+    // the command appeared to do nothing at all.
+    const calls = await feed(textUpdate('/app'));
+    assert.ok(texts(calls).length > 0, '/app must produce a message');
+  });
+
+  it('recognises every command it advertises', async () => {
+    for (const { name } of ALL_COMMANDS) {
+      const reply = allText(await feed(textUpdate(`/${name}`)));
+      assert.doesNotMatch(reply, /Unknown command/i, `/${name} should be recognised`);
+    }
+  });
+
+  it('explains itself in a group instead of offering a connection code', async () => {
+    // Linking a group would let every member act as one person.
+    const calls = await feed({
+      update_id: updateId++,
+      message: {
+        message_id: updateId,
+        date: Math.floor(Date.now() / 1000),
+        chat: { id: -100123456, type: 'group', title: 'Team' },
+        from: TELEGRAM_USER,
+        text: '/mytasks',
+        entities: [{ type: 'bot_command', offset: 0, length: 8 }],
+      },
+    });
+    assert.match(allText(calls), /direct message/i);
+  });
+
+  it('stays out of ordinary group chatter', async () => {
+    const calls = await feed({
+      update_id: updateId++,
+      message: {
+        message_id: updateId,
+        date: Math.floor(Date.now() / 1000),
+        chat: { id: -100123456, type: 'group', title: 'Team' },
+        from: TELEGRAM_USER,
+        text: 'lunch?',
+      },
+    });
+    assert.equal(texts(calls).length, 0, 'the bot should not answer group small talk');
+  });
+
+  it('does not claim to cancel something that was not running', async () => {
+    await prisma.telegramPending.deleteMany({ where: { chatId: BigInt(CHAT_ID) } });
+    const reply = allText(await feed(textUpdate('/cancel')));
+    assert.match(reply, /nothing to cancel/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
+
+describe('messages keep up with the work', () => {
+  it('redraws the card when a button changes the status', async () => {
+    const calls = await feed(callbackUpdate(`task:start:${task.id}`));
+    const edit = calls.find((call) => call.method === 'editMessageText');
+    assert.ok(edit, 'the message the button sits on should be rewritten');
+    assert.ok(
+      edit.payload.text.includes(task.key.replace(/-/g, '\\-')),
+      'the rewritten message should still be about this task',
+    );
+  });
+
+  it('will not let a decided hotfix be decided again', async () => {
+    // It was approved earlier in this suite; a second tap from a stale message
+    // must report what happened rather than overrule it.
+    const reply = allText(await feed(callbackUpdate(`hotfix:reject:${hotfix.id}`)));
+    assert.match(reply, /already/i);
+
+    const after = await prisma.hotfix.findUnique({ where: { id: hotfix.id } });
+    assert.equal(after.status, 'APPROVED', 'the first decision must stand');
   });
 });
 
