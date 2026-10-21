@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import type { Prisma } from '../../generated/prisma/client.js';
 import { env } from '../../config/env.js';
 import { randomToken, sha256 } from '../../lib/crypto.js';
 import { badRequest, conflict, forbidden, notFound } from '../../lib/errors.js';
@@ -78,6 +79,9 @@ export const listUsers = async (req: Request, res: Response) => {
   );
 };
 
+/** How far back "finished recently" looks on a person's page. */
+const COMPLETED_WINDOW_DAYS = 30;
+
 export const getUser = async (req: Request, res: Response) => {
   const auth = getAuth(req);
   const userId = String(req.params.userId);
@@ -110,14 +114,31 @@ export const getUser = async (req: Request, res: Response) => {
 
   const accessible = await auth.accessibleProjectIds();
 
-  const [openTasks, openIssues, overdueTasks] = await Promise.all([
-    prisma.task.count({
-      where: {
-        projectId: { in: accessible },
-        assignees: { some: { userId } },
-        status: { category: { notIn: ['DONE', 'CANCELED'] } },
-      },
-    }),
+  // "What is this person up to" needs more than three counts: what they are
+  // carrying, what is stuck on them, and what they have actually finished.
+  // Everything is restricted to projects the caller can already see, so this
+  // page never becomes a way around project access.
+  const assigned: Prisma.TaskWhereInput = {
+    projectId: { in: accessible },
+    assignees: { some: { userId } },
+  };
+  const openWork: Prisma.TaskWhereInput['status'] = {
+    category: { notIn: ['DONE', 'CANCELED'] },
+  };
+  const since = new Date(Date.now() - COMPLETED_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+
+  const [
+    openTasks,
+    openIssues,
+    overdueTasks,
+    blockedTasks,
+    completedTasks,
+    reportedIssues,
+    openHotfixes,
+    issues,
+    recentlyCompleted,
+  ] = await Promise.all([
+    prisma.task.count({ where: { ...assigned, status: openWork } }),
     prisma.issue.count({
       where: {
         projectId: { in: accessible },
@@ -125,12 +146,45 @@ export const getUser = async (req: Request, res: Response) => {
         status: { notIn: ['CLOSED', 'RESOLVED', 'WONT_FIX'] },
       },
     }),
-    prisma.task.count({
+    prisma.task.count({ where: { ...assigned, dueDate: { lt: new Date() }, status: openWork } }),
+    prisma.task.count({ where: { ...assigned, status: { category: 'BLOCKED' } } }),
+    prisma.task.count({ where: { ...assigned, completedAt: { gte: since } } }),
+    prisma.issue.count({ where: { projectId: { in: accessible }, reporterId: userId } }),
+    prisma.hotfix.count({
       where: {
         projectId: { in: accessible },
-        assignees: { some: { userId } },
-        dueDate: { lt: new Date() },
-        status: { category: { notIn: ['DONE', 'CANCELED'] } },
+        assigneeId: userId,
+        status: { notIn: ['DEPLOYED', 'VERIFIED', 'REJECTED'] },
+      },
+    }),
+    prisma.issue.findMany({
+      where: {
+        projectId: { in: accessible },
+        assigneeId: userId,
+        status: { notIn: ['CLOSED', 'RESOLVED', 'WONT_FIX'] },
+      },
+      orderBy: [{ severity: 'desc' }, { createdAt: 'desc' }],
+      take: 8,
+      select: {
+        id: true,
+        key: true,
+        title: true,
+        status: true,
+        severity: true,
+        dueDate: true,
+        project: { select: projectSummary },
+      },
+    }),
+    prisma.task.findMany({
+      where: { ...assigned, completedAt: { gte: since } },
+      orderBy: { completedAt: 'desc' },
+      take: 8,
+      select: {
+        id: true,
+        key: true,
+        title: true,
+        completedAt: true,
+        project: { select: projectSummary },
       },
     }),
   ]);
@@ -140,7 +194,18 @@ export const getUser = async (req: Request, res: Response) => {
     data: {
       ...rest,
       telegramLinked: telegramChatId !== null,
-      workload: { openTasks, openIssues, overdueTasks },
+      workload: {
+        openTasks,
+        openIssues,
+        overdueTasks,
+        blockedTasks,
+        completedTasks,
+        reportedIssues,
+        openHotfixes,
+      },
+      completedWindowDays: COMPLETED_WINDOW_DAYS,
+      issues,
+      recentlyCompleted,
     },
   });
 };
