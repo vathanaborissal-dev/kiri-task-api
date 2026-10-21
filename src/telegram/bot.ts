@@ -15,6 +15,17 @@ let receivingUpdates = false;
 
 const MAX_POLLING_RETRY_MS = 30_000;
 
+/**
+ * Telegram allows exactly one `getUpdates` consumer per bot token. A second
+ * one ends the first with a 409, the first retries and ends the second, and
+ * the pair trade the session back and forth — so the bot answers some messages
+ * and silently drops others. It reads as "Telegram works sometimes".
+ *
+ * Retrying cannot win that fight, so say what is wrong once, in terms that
+ * name the fix, and stop filling the log with the same warning.
+ */
+let conflictReported = false;
+
 export const getBot = (): Bot | null => bot;
 export const telegramReceivingUpdates = () => receivingUpdates;
 
@@ -76,6 +87,7 @@ const startPolling = (instance: Bot) => {
       onStart: (info) => {
         receivingUpdates = true;
         pollingRetryDelayMs = 2_000;
+        conflictReported = false;
         logger.info({ username: info.username }, 'Telegram bot polling');
       },
     })
@@ -83,9 +95,30 @@ const startPolling = (instance: Bot) => {
       if (bot !== instance) return;
 
       receivingUpdates = false;
+
+      const isConflict = error instanceof GrammyError && error.error_code === 409;
+      if (isConflict) {
+        // Another poller owns the session; back off to the ceiling rather than
+        // hammering it every couple of seconds.
+        pollingRetryDelayMs = MAX_POLLING_RETRY_MS;
+        if (!conflictReported) {
+          conflictReported = true;
+          logger.error(
+            'Another process is already polling this Telegram bot. Only one may run at a time: '
+              + 'check for a second `npm run dev`, a stray `npm run bot`, or a deployed instance '
+              + 'using the same TELEGRAM_BOT_TOKEN. Until then the bot will answer unreliably. '
+              + 'Set TELEGRAM_WEBHOOK_URL in production, or TELEGRAM_BOT_IN_PROCESS=false here.',
+          );
+        }
+      } else {
+        conflictReported = false;
+      }
+
       const retryInMs = pollingRetryDelayMs;
-      pollingRetryDelayMs = Math.min(pollingRetryDelayMs * 2, MAX_POLLING_RETRY_MS);
-      logger.warn({ error, retryInMs }, 'Telegram polling stopped; retrying');
+      if (!isConflict) {
+        pollingRetryDelayMs = Math.min(pollingRetryDelayMs * 2, MAX_POLLING_RETRY_MS);
+        logger.warn({ error, retryInMs }, 'Telegram polling stopped; retrying');
+      }
 
       pollingRetryTimer = setTimeout(() => {
         pollingRetryTimer = null;
@@ -114,6 +147,9 @@ export const startBot = async (): Promise<void> => {
     { command: 'today', description: "Today's work and deadlines" },
     { command: 'overdue', description: 'Overdue tasks and issues' },
     { command: 'issues', description: 'Issues assigned to me' },
+    { command: 'alltasks', description: 'Every open task I can see' },
+    { command: 'allissues', description: 'Every open issue I can see' },
+    { command: 'hotfixes', description: 'Hotfixes in flight' },
     { command: 'projects', description: 'Projects I can access' },
     { command: 'report', description: 'Report an issue' },
     { command: 'app', description: 'Open Kiri Task' },

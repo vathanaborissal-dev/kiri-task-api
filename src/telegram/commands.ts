@@ -1,6 +1,8 @@
 import { type Bot, InlineKeyboard } from 'grammy';
+import { formatDate } from '../lib/dates.js';
 import { prisma } from '../lib/prisma.js';
 import * as fmt from './format.js';
+import { table } from './table.js';
 import { authForChat, linkChat } from './service.js';
 import { clearPending, setPending } from './state.js';
 
@@ -347,6 +349,170 @@ export const registerCommands = (bot: Bot) => {
         ...issues.map((i) => fmt.issueLine(i, auth.user.timezone)),
       ].join('\n'),
       { parse_mode: 'MarkdownV2', reply_markup: keyboard },
+    );
+  });
+
+  const OPEN_HOTFIX_STATUSES = [
+    'REQUESTED',
+    'APPROVED',
+    'IN_PROGRESS',
+    'IN_TESTING',
+    'READY',
+  ] as const;
+
+  /** How many rows a phone can scan before the block becomes a scroll. */
+  const LIST_LIMIT = 25;
+
+  type Replier = {
+    reply: (text: string, other?: { parse_mode?: 'MarkdownV2' }) => Promise<unknown>;
+  };
+
+  const emptyNotice = async (ctx: Replier, what: string) => {
+    await ctx.reply(fmt.esc(`Nothing open: no ${what} you can see right now.`), {
+      parse_mode: 'MarkdownV2',
+    });
+  };
+
+  // --- Everything, not just mine -------------------------------------------
+  // `/mytasks` and `/issues` answer "what is on me". These answer "what is on
+  // the team", scoped to the projects the caller may read, so the bot never
+  // reveals a project they cannot open in the app.
+
+  bot.command('alltasks', async (ctx) => {
+    const auth = await authForChat(ctx.chat.id);
+    if (!auth) return void ctx.reply(NOT_LINKED, { parse_mode: 'MarkdownV2' });
+
+    const projectIds = await auth.projectIdsWith('task:view');
+    const tasks = await prisma.task.findMany({
+      where: {
+        projectId: { in: projectIds },
+        status: { category: { notIn: ['DONE', 'CANCELED'] } },
+      },
+      orderBy: [{ dueDate: { sort: 'asc', nulls: 'last' } }, { priority: 'desc' }],
+      take: LIST_LIMIT,
+      select: {
+        key: true,
+        title: true,
+        dueDate: true,
+        status: { select: { name: true } },
+        assignees: { select: { user: { select: { name: true } } }, take: 2 },
+      },
+    });
+
+    if (tasks.length === 0) return void emptyNotice(ctx, 'open tasks');
+
+    await ctx.reply(
+      [
+        fmt.sectionHeader('All open tasks', tasks.length),
+        '',
+        table(
+          [
+            { header: 'key', width: 10 },
+            { header: 'task', width: 30 },
+            { header: 'status', width: 12 },
+            { header: 'who', width: 12 },
+            { header: 'due', width: 6 },
+          ],
+          tasks.map((t) => [
+            t.key,
+            t.title,
+            t.status.name,
+            t.assignees.map((a) => a.user.name.split(' ')[0]).join(', ') || '—',
+            t.dueDate ? formatDate(t.dueDate, auth.user.timezone) : '—',
+          ]),
+        ),
+      ].join('\n'),
+      { parse_mode: 'MarkdownV2' },
+    );
+  });
+
+  bot.command('allissues', async (ctx) => {
+    const auth = await authForChat(ctx.chat.id);
+    if (!auth) return void ctx.reply(NOT_LINKED, { parse_mode: 'MarkdownV2' });
+
+    const projectIds = await auth.projectIdsWith('issue:view');
+    const issues = await prisma.issue.findMany({
+      where: { projectId: { in: projectIds }, status: { in: [...OPEN_ISSUE_STATUSES] } },
+      orderBy: [{ severity: 'desc' }, { createdAt: 'desc' }],
+      take: LIST_LIMIT,
+      select: {
+        key: true,
+        title: true,
+        severity: true,
+        status: true,
+        assignee: { select: { name: true } },
+      },
+    });
+
+    if (issues.length === 0) return void emptyNotice(ctx, 'open issues');
+
+    await ctx.reply(
+      [
+        fmt.sectionHeader('All open issues', issues.length),
+        '',
+        table(
+          [
+            { header: 'key', width: 10 },
+            { header: 'issue', width: 28 },
+            { header: 'severity', width: 8 },
+            { header: 'status', width: 12 },
+            { header: 'who', width: 12 },
+          ],
+          issues.map((i) => [
+            i.key,
+            i.title,
+            i.severity,
+            i.status.replace(/_/g, ' '),
+            i.assignee?.name.split(' ')[0] ?? 'unassigned',
+          ]),
+        ),
+      ].join('\n'),
+      { parse_mode: 'MarkdownV2' },
+    );
+  });
+
+  bot.command('hotfixes', async (ctx) => {
+    const auth = await authForChat(ctx.chat.id);
+    if (!auth) return void ctx.reply(NOT_LINKED, { parse_mode: 'MarkdownV2' });
+
+    const projectIds = await auth.projectIdsWith('hotfix:view');
+    const hotfixes = await prisma.hotfix.findMany({
+      where: { projectId: { in: projectIds }, status: { in: [...OPEN_HOTFIX_STATUSES] } },
+      orderBy: [{ severity: 'desc' }, { createdAt: 'desc' }],
+      take: LIST_LIMIT,
+      select: {
+        key: true,
+        title: true,
+        severity: true,
+        status: true,
+        assignee: { select: { name: true } },
+      },
+    });
+
+    if (hotfixes.length === 0) return void emptyNotice(ctx, 'hotfixes in flight');
+
+    await ctx.reply(
+      [
+        fmt.sectionHeader('Hotfixes in flight', hotfixes.length),
+        '',
+        table(
+          [
+            { header: 'key', width: 10 },
+            { header: 'hotfix', width: 30 },
+            { header: 'severity', width: 8 },
+            { header: 'status', width: 11 },
+            { header: 'who', width: 12 },
+          ],
+          hotfixes.map((h) => [
+            h.key,
+            h.title,
+            h.severity,
+            h.status.replace(/_/g, ' '),
+            h.assignee?.name.split(' ')[0] ?? 'unassigned',
+          ]),
+        ),
+      ].join('\n'),
+      { parse_mode: 'MarkdownV2' },
     );
   });
 
