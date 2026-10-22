@@ -91,6 +91,22 @@ export const createApp = (): Express => {
   app.use(express.urlencoded({ extended: true, limit: '2mb' }));
   app.use(cookieParser());
 
+  // Serverless has no startup hook. Work begun at module scope is frozen along
+  // with the instance as soon as a response is sent, so registering the webhook
+  // there usually never finished — which is why the deployed bot went quiet and
+  // only came back once something kept an instance busy long enough. Confirming
+  // it inside a request means it is genuinely awaited. The promise is cached, so
+  // this costs one Telegram round trip per instance rather than per request.
+  if (env.telegramEnabled && env.TELEGRAM_WEBHOOK_URL) {
+    let confirming: Promise<unknown> | null = null;
+    app.use((_req, _res, next) => {
+      confirming ??= ensureWebhook().catch((error) =>
+        logger.error({ error }, 'Could not confirm the Telegram webhook'),
+      );
+      void confirming.finally(() => next());
+    });
+  }
+
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok', uptime: process.uptime(), version: '1.0.0' });
   });
