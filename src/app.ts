@@ -98,11 +98,19 @@ export const createApp = (): Express => {
   // it inside a request means it is genuinely awaited. The promise is cached, so
   // this costs one Telegram round trip per instance rather than per request.
   if (env.telegramEnabled && env.TELEGRAM_WEBHOOK_URL) {
+    // Capped, because the call has no timeout of its own: a slow or unreachable
+    // Telegram must not hold up somebody's request. Giving up here only defers
+    // the check — the daily cron re-asserts it, and so does the next instance.
+    const CONFIRM_TIMEOUT_MS = 3_000;
     let confirming: Promise<unknown> | null = null;
+
     app.use((_req, _res, next) => {
-      confirming ??= ensureWebhook().catch((error) =>
-        logger.error({ error }, 'Could not confirm the Telegram webhook'),
-      );
+      confirming ??= Promise.race([
+        ensureWebhook().catch((error) =>
+          logger.error({ error }, 'Could not confirm the Telegram webhook'),
+        ),
+        new Promise((resolve) => setTimeout(resolve, CONFIRM_TIMEOUT_MS).unref()),
+      ]);
       void confirming.finally(() => next());
     });
   }
