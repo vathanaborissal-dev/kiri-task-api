@@ -168,6 +168,52 @@ const startPolling = (instance: Bot) => {
     });
 };
 
+/** Where Telegram should deliver updates for this deployment. */
+const webhookEndpoint = (): string | null =>
+  env.TELEGRAM_WEBHOOK_URL
+    ? `${env.TELEGRAM_WEBHOOK_URL.replace(/\/$/, '')}/api/telegram/webhook`
+    : null;
+
+export type WebhookState = {
+  url: string;
+  /** True when the webhook was missing or pointed elsewhere and has been set. */
+  repaired: boolean;
+  /** Updates Telegram was holding because nothing was listening. */
+  pending: number;
+};
+
+/**
+ * Makes sure Telegram is still delivering here, and puts it back if not.
+ *
+ * A webhook is not permanent: `deleteWebhook` from anywhere holding the same
+ * token removes it, and a bot token has exactly one delivery mode — so a
+ * developer running the bot locally silently switches production off. There is
+ * nothing to notice when it happens, because an undelivered update looks
+ * identical to nobody having sent one.
+ *
+ * Cheap enough to call on a cold start and from the daily cron: it only writes
+ * when the registration is actually wrong.
+ */
+export const ensureWebhook = async (): Promise<WebhookState | null> => {
+  const url = webhookEndpoint();
+  if (!url || !bot) return null;
+
+  const info = await bot.api.getWebhookInfo();
+  if (info.url === url) {
+    return { url, repaired: false, pending: info.pending_update_count };
+  }
+
+  await bot.api.setWebhook(url, {
+    ...(env.TELEGRAM_WEBHOOK_SECRET ? { secret_token: env.TELEGRAM_WEBHOOK_SECRET } : {}),
+    drop_pending_updates: false,
+  });
+  logger.warn(
+    { url, was: info.url || '(none — the bot was being polled elsewhere)' },
+    'Telegram was not delivering to this deployment; the webhook has been restored',
+  );
+  return { url, repaired: true, pending: info.pending_update_count };
+};
+
 export const startBot = async (): Promise<void> => {
   if (!env.telegramEnabled) {
     logger.info('TELEGRAM_BOT_TOKEN is not set — the Telegram bot is disabled');
@@ -205,17 +251,32 @@ export const startBot = async (): Promise<void> => {
   }
 
   if (env.TELEGRAM_WEBHOOK_URL) {
-    const url = `${env.TELEGRAM_WEBHOOK_URL.replace(/\/$/, '')}/api/telegram/webhook`;
-    await bot.api.setWebhook(url, {
-      ...(env.TELEGRAM_WEBHOOK_SECRET ? { secret_token: env.TELEGRAM_WEBHOOK_SECRET } : {}),
-      drop_pending_updates: false,
-    });
+    const state = await ensureWebhook();
     receivingUpdates = true;
-    logger.info({ url }, 'Telegram bot running in webhook mode');
-  } else {
-    await bot.api.deleteWebhook({ drop_pending_updates: false }).catch(() => undefined);
-    startPolling(bot);
+    logger.info(
+      { url: state?.url, repaired: state?.repaired, pending: state?.pending },
+      'Telegram bot running in webhook mode',
+    );
+    return;
   }
+
+  // About to poll. If this token is currently delivering to a webhook, polling
+  // would delete it and silence the deployed bot — from here that is invisible,
+  // and from the deployment it looks like the bot has gone to sleep. Refuse,
+  // and say which setting resolves it either way.
+  const existing = await bot.api.getWebhookInfo().catch(() => null);
+  if (existing?.url && !env.TELEGRAM_TAKE_OVER_WEBHOOK) {
+    logger.error(
+      { webhook: existing.url },
+      'This bot token is delivering to a deployed webhook. Polling here would delete it '
+        + 'and stop the deployed bot answering. Set TELEGRAM_BOT_IN_PROCESS=false to leave '
+        + 'it alone, or TELEGRAM_TAKE_OVER_WEBHOOK=true to take the bot over on purpose.',
+    );
+    return;
+  }
+
+  await bot.api.deleteWebhook({ drop_pending_updates: false }).catch(() => undefined);
+  startPolling(bot);
 };
 
 export const stopBot = async (): Promise<void> => {

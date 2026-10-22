@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "tsx watch --env-file=.env src/server.ts",
     "bot": "tsx watch --env-file=.env src/bot.ts",
+    "telegram:webhook": "tsx --env-file=.env scripts/telegram-webhook.ts",
     "build": "tsc -p tsconfig.json",
     "postinstall": "prisma generate",
     "start": "node --env-file=.env dist/server.js",

@@ -14,7 +14,7 @@ import { apiLimiter } from './middleware/rateLimit.js';
 import { apiRouter } from './routes.js';
 import { pruneRefreshTokens } from './modules/auth/auth.service.js';
 import { runDeadlineSweep } from './jobs/deadlines.js';
-import { getBot, startBot, telegramWebhookHandler } from './telegram/bot.js';
+import { ensureWebhook, getBot, startBot, telegramWebhookHandler } from './telegram/bot.js';
 
 /**
  * Helmet, resolved at runtime rather than by the type-checker.
@@ -104,11 +104,18 @@ export const createApp = (): Express => {
       return;
     }
 
-    const [reminders, removedRefreshTokens] = await Promise.all([
+    // Re-assert the Telegram webhook while we are here. A cold start registers
+    // it too, but a deployment that nobody visits never cold-starts — which is
+    // the exact case where the bot appears to have gone to sleep.
+    const [reminders, removedRefreshTokens, webhook] = await Promise.all([
       runDeadlineSweep(),
       pruneRefreshTokens(),
+      ensureWebhook().catch((error) => {
+        logger.error({ error }, 'Could not confirm the Telegram webhook');
+        return null;
+      }),
     ]);
-    res.json({ ok: true, reminders, removedRefreshTokens });
+    res.json({ ok: true, reminders, removedRefreshTokens, webhook });
   });
 
   // Telegram's webhook is authenticated by its own secret token and must sit

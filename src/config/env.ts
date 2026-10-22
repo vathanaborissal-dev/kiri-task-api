@@ -56,6 +56,8 @@ const schema = z.object({
   TELEGRAM_WEBHOOK_SECRET: z.string().optional(),
   /// Run the bot inside the API process (long polling) instead of a separate worker.
   TELEGRAM_BOT_IN_PROCESS: bool(true),
+  /// Deliberately take a bot token away from its deployed webhook to poll it here.
+  TELEGRAM_TAKE_OVER_WEBHOOK: bool(false),
 
   ENABLE_SCHEDULER: bool(true),
   /// Protects the Vercel Cron endpoint. Vercel sends it as a Bearer token.
