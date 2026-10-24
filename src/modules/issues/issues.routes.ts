@@ -21,7 +21,17 @@ issuesRouter.post(
   validate({ body: schemas.createIssueSchema }),
   asyncHandler(controller.createIssue),
 );
+// Static before dynamic: `/workflow` would otherwise be read as an issue key.
+issuesRouter.get('/workflow', asyncHandler(controller.getWorkflow));
+issuesRouter.post(
+  '/bulk',
+  writeLimiter,
+  validate({ body: schemas.bulkUpdateIssuesSchema }),
+  asyncHandler(controller.bulkUpdate),
+);
+
 issuesRouter.get('/:issueId', asyncHandler(controller.getIssue));
+issuesRouter.get('/:issueId/transitions', asyncHandler(controller.getTransitions));
 issuesRouter.patch(
   '/:issueId',
   validate({ body: schemas.updateIssueSchema }),
@@ -33,5 +43,10 @@ issuesRouter.post(
   asyncHandler(controller.changeStatus),
 );
 issuesRouter.post('/:issueId/watch', asyncHandler(controller.toggleWatch));
-issuesRouter.post('/:issueId/create-task', asyncHandler(controller.convertToTask));
+issuesRouter.post(
+  '/:issueId/create-task',
+  writeLimiter,
+  validate({ body: schemas.createIssueTaskSchema }),
+  asyncHandler(controller.convertToTask),
+);
 issuesRouter.delete('/:issueId', asyncHandler(controller.deleteIssue));

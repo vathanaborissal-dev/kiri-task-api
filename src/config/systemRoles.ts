@@ -114,6 +114,8 @@ export const SYSTEM_ROLES: SystemRoleSeed[] = [
       'task:manage_qa',
       'task:delete',
       'issue:assign',
+      'issue:close',
+      'issue:reopen',
       'release:create',
       'release:update',
       'release:deploy',
@@ -146,9 +148,35 @@ export const SYSTEM_ROLES: SystemRoleSeed[] = [
       'issue:create',
       'issue:update',
       'issue:change_status',
+      'issue:reopen',
       'comment:create',
       'attachment:upload',
       'hotfix:create',
+    ],
+  },
+  {
+    key: 'issue-manager',
+    name: 'Issue Manager',
+    description:
+      'Owns the issue queue: triages, assigns, closes and reopens issues without running the rest of the project.',
+    scope: 'PROJECT',
+    permissions: [
+      ...READ_ONLY_PROJECT,
+      'issue:create',
+      'issue:update',
+      'issue:delete',
+      'issue:assign',
+      'issue:change_status',
+      'issue:close',
+      'issue:reopen',
+      'task:create',
+      'task:assign',
+      'task:manage_deadline',
+      'comment:create',
+      'comment:moderate',
+      'attachment:upload',
+      'attachment:delete',
+      'standup:view_team',
     ],
   },
   {
@@ -173,6 +201,15 @@ export const LATER_GRANTS: { roleKey: string; permission: string }[] = [
   { roleKey: 'workspace-manager', permission: 'standup:view_team' },
   { roleKey: 'project-manager', permission: 'standup:view_team' },
   { roleKey: 'team-lead', permission: 'standup:view_team' },
+  // Closing and reopening were carved out of `issue:change_status`. Without
+  // these, an existing workspace's leads would lose an ability they had.
+  { roleKey: 'project-manager', permission: 'issue:close' },
+  { roleKey: 'project-manager', permission: 'issue:reopen' },
+  { roleKey: 'team-lead', permission: 'issue:close' },
+  { roleKey: 'team-lead', permission: 'issue:reopen' },
+  { roleKey: 'qa', permission: 'issue:reopen' },
+  { roleKey: 'head-of-department', permission: 'issue:close' },
+  { roleKey: 'head-of-department', permission: 'issue:reopen' },
 ];
 
 export const DEFAULT_GLOBAL_ROLE_KEY = 'member';

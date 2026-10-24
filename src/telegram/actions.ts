@@ -10,7 +10,8 @@ import { findByKey, parseItemKey, type ItemKind } from './lookup.js';
 import { menuFor } from './menus.js';
 import * as mut from './mutations.js';
 import { authForChat } from './service.js';
-import { clearPending, getPending, setPending } from './state.js';
+import { clearPending, getPending, setPending, type PendingAction } from './state.js';
+import { dayjs } from '../lib/dates.js';
 
 const SEVERITY_CHOICES: { label: string; value: Severity }[] = [
   { label: '⛔️ Blocker', value: 'BLOCKER' },
@@ -20,6 +21,156 @@ const SEVERITY_CHOICES: { label: string; value: Severity }[] = [
 ];
 
 const md = { parse_mode: 'MarkdownV2' as const, link_preview_options: { is_disabled: true } };
+
+/**
+ * Date shortcuts for the report flow.
+ *
+ * Buttons rather than free text, because typing a date into a chat window is
+ * the step people abandon — but a typed `YYYY-MM-DD` is still accepted, since
+ * four presets cannot cover a deadline three weeks out.
+ */
+const START_DATE_CHOICES = [
+  { label: '📅 Today', token: 'today', days: 0 },
+  { label: '📅 Tomorrow', token: 'tomorrow', days: 1 },
+  { label: '📅 Next Monday', token: 'monday', days: null },
+] as const;
+
+const DUE_DATE_CHOICES = [
+  { label: '⏱ In 3 days', token: '3d', days: 3 },
+  { label: '⏱ In a week', token: '1w', days: 7 },
+  { label: '⏱ In 2 weeks', token: '2w', days: 14 },
+  { label: '⏱ In a month', token: '1m', days: 30 },
+] as const;
+
+const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/** `YYYY-MM-DD` in the user's own zone, so "today" is their today. */
+const isoDay = (tz: string | null | undefined, addDays = 0) =>
+  dayjs()
+    .tz(tz ?? 'Asia/Phnom_Penh')
+    .add(addDays, 'day')
+    .format('YYYY-MM-DD');
+
+/**
+ * The next Monday in `tz`, never today.
+ *
+ * Plain `day()` arithmetic rather than `isoWeekday()`, so this does not depend
+ * on the isoWeek plugin being registered: `day()` is Sunday 0 … Saturday 6, and
+ * the `|| 7` turns "zero days away" — i.e. it is already Monday — into a full
+ * week, which is what somebody picking "next Monday" means.
+ */
+const nextMonday = (tz: string | null | undefined) => {
+  const today = dayjs().tz(tz ?? 'Asia/Phnom_Penh');
+  return today.add((8 - today.day()) % 7 || 7, 'day').format('YYYY-MM-DD');
+};
+
+/**
+ * A typed date, or `null` when it is not one — or is not a real day.
+ *
+ * The round-trip is the validity check: `customParseFormat` is not loaded, so
+ * dayjs would silently accept `2026-02-31` and normalise it to 2 March. The
+ * regex fixes the shape and the comparison catches the rest.
+ */
+const parseTypedDate = (text: string): string | null => {
+  const trimmed = text.trim();
+  if (!ISO_DATE.test(trimmed)) return null;
+  const parsed = dayjs.utc(trimmed);
+  if (!parsed.isValid()) return null;
+  return parsed.format('YYYY-MM-DD') === trimmed ? trimmed : null;
+};
+
+const startDateKeyboard = () => {
+  const keyboard = new InlineKeyboard();
+  START_DATE_CHOICES.forEach((choice, index) => {
+    keyboard.text(choice.label, `report:sdate:${choice.token}`);
+    if (index % 2 === 1) keyboard.row();
+  });
+  return keyboard.row().text('Skip', 'report:sdate:none');
+};
+
+const dueDateKeyboard = () => {
+  const keyboard = new InlineKeyboard();
+  DUE_DATE_CHOICES.forEach((choice, index) => {
+    keyboard.text(choice.label, `report:ddate:${choice.token}`);
+    if (index % 2 === 1) keyboard.row();
+  });
+  return keyboard.row().text('No deadline', 'report:ddate:none');
+};
+
+/** Creates the issue once every step has been answered. */
+const finishReport = async (
+  ctx: Context,
+  auth: AuthContext,
+  pending: Extract<PendingAction, { kind: 'report:details' }>,
+) => {
+  const issue = await mut.createIssueFromTelegram(auth, {
+    projectId: pending.projectId,
+    title: pending.title,
+    description: pending.description ?? null,
+    severity: (pending.severity as Severity) ?? 'MAJOR',
+    phaseId: pending.phaseId ?? null,
+    startDate: pending.startDate ?? null,
+    dueDate: pending.dueDate ?? null,
+  });
+
+  await setPending(ctx.chat!.id, {
+    kind: 'report:attachment',
+    issueId: issue.id,
+    projectId: pending.projectId,
+  });
+
+  const dates = [
+    pending.startDate ? `Starts ${pending.startDate}` : null,
+    pending.dueDate ? `Due ${pending.dueDate}` : null,
+  ].filter(Boolean);
+
+  await ctx.reply(
+    [
+      `✅ Reported as *${fmt.esc(issue.key)}*\\.`,
+      ...(dates.length ? ['', fmt.esc(dates.join(' · '))] : []),
+      '',
+      'Send a screenshot or file now to attach it, or tap Done\\.',
+    ].join('\n'),
+    {
+      ...md,
+      reply_markup: fmt.addOpenButton(
+        new InlineKeyboard().text('Done', 'report:finish'),
+        'Open issue',
+        issue.url,
+        `issue:menu:${issue.id}`,
+      ),
+    },
+  );
+};
+
+/** Asks for the start date. Shared by the phase step and a retry. */
+const askStartDate = async (ctx: Context, pending: Extract<PendingAction, { kind: 'report:details' }>) => {
+  await setPending(ctx.chat!.id, { ...pending, awaiting: 'start' });
+  await ctx.reply(
+    [
+      '*When should work start\?*',
+      '',
+      fmt.esc('Tap one, or type a date like 2026-11-03.'),
+    ].join('\n'),
+    { ...md, reply_markup: startDateKeyboard() },
+  );
+};
+
+/** Asks for the end date, showing the start date already chosen. */
+const askDueDate = async (ctx: Context, pending: Extract<PendingAction, { kind: 'report:details' }>) => {
+  await setPending(ctx.chat!.id, { ...pending, awaiting: 'due' });
+  await ctx.reply(
+    [
+      '*When is the fix due\?*',
+      pending.startDate ? fmt.esc(`Starting ${pending.startDate}.`) : null,
+      '',
+      fmt.esc('Tap one, or type a date like 2026-11-17.'),
+    ]
+      .filter(Boolean)
+      .join('\n'),
+    { ...md, reply_markup: dueDateKeyboard() },
+  );
+};
 
 /** Turns a thrown AppError into a friendly Telegram reply. */
 const guard = async (ctx: Context, fn: () => Promise<void>) => {
@@ -320,7 +471,7 @@ export const registerActions = (bot: Bot) => {
 
   bot.callbackQuery(/^report:phase:(.+)$/, async (ctx) =>
     guard(ctx, async () => {
-      const auth = await requireAuth(ctx);
+      await requireAuth(ctx);
 
       const pending = await getPending(ctx.chat!.id);
       if (!pending || pending.kind !== 'report:details') {
@@ -328,39 +479,58 @@ export const registerActions = (bot: Bot) => {
       }
 
       const raw = ctx.match[1]!;
-      const phaseId = raw === 'none' ? null : raw;
+      await ctx.answerCallbackQuery();
+      // The issue is created at the end of the date steps, not here, so a
+      // half-finished report never leaves a dateless issue behind.
+      await askStartDate(ctx, { ...pending, phaseId: raw === 'none' ? null : raw });
+    }),
+  );
 
-      const issue = await mut.createIssueFromTelegram(auth, {
-        projectId: pending.projectId,
-        title: pending.title,
-        description: pending.description ?? null,
-        severity: (pending.severity as Severity) ?? 'MAJOR',
-        phaseId,
-      });
+  bot.callbackQuery(/^report:sdate:(.+)$/, async (ctx) =>
+    guard(ctx, async () => {
+      const auth = await requireAuth(ctx);
 
-      await setPending(ctx.chat!.id, {
-        kind: 'report:attachment',
-        issueId: issue.id,
-        projectId: pending.projectId,
-      });
+      const pending = await getPending(ctx.chat!.id);
+      if (!pending || pending.kind !== 'report:details') {
+        throw new AppError(400, 'BAD_REQUEST', 'That report has expired. Start again with /report');
+      }
+
+      const token = ctx.match[1]!;
+      const tz = auth.user.timezone;
+      const startDate =
+        token === 'none'
+          ? null
+          : token === 'monday'
+            ? nextMonday(tz)
+            : isoDay(tz, START_DATE_CHOICES.find((c) => c.token === token)?.days ?? 0);
 
       await ctx.answerCallbackQuery();
-      await ctx.reply(
-        [
-          `✅ Reported as *${fmt.esc(issue.key)}*\\.`,
-          '',
-          'Send a screenshot or file now to attach it, or tap Done\\.',
-        ].join('\n'),
-        {
-          ...md,
-          reply_markup: fmt.addOpenButton(
-            new InlineKeyboard().text('Done', 'report:finish'),
-            'Open issue',
-            issue.url,
-            `issue:menu:${issue.id}`,
-          ),
-        },
-      );
+      await askDueDate(ctx, { ...pending, startDate });
+    }),
+  );
+
+  bot.callbackQuery(/^report:ddate:(.+)$/, async (ctx) =>
+    guard(ctx, async () => {
+      const auth = await requireAuth(ctx);
+
+      const pending = await getPending(ctx.chat!.id);
+      if (!pending || pending.kind !== 'report:details') {
+        throw new AppError(400, 'BAD_REQUEST', 'That report has expired. Start again with /report');
+      }
+
+      const token = ctx.match[1]!;
+      const offset = DUE_DATE_CHOICES.find((choice) => choice.token === token)?.days;
+      // Counted from the start date when there is one, so "in a week" means a
+      // week of work rather than a week from whenever the report was filed.
+      const dueDate =
+        token === 'none' || offset === undefined
+          ? null
+          : pending.startDate
+            ? dayjs.utc(pending.startDate).add(offset, 'day').format('YYYY-MM-DD')
+            : isoDay(auth.user.timezone, offset);
+
+      await ctx.answerCallbackQuery();
+      await finishReport(ctx, auth, { ...pending, dueDate });
     }),
   );
 
@@ -474,6 +644,33 @@ export const registerActions = (bot: Bot) => {
 
       if (pending.kind === 'report:attachment') {
         await ctx.reply('Send an image or file to attach, or tap Done above\\.', md);
+        return;
+      }
+
+      // A date step accepts a typed `YYYY-MM-DD` as well as its buttons.
+      if (pending.kind === 'report:details' && pending.awaiting) {
+        const typed = parseTypedDate(ctx.message.text);
+        if (!typed) {
+          await ctx.reply(
+            fmt.esc('Tap one of the buttons above, or type a date like 2026-11-03.'),
+            md,
+          );
+          return;
+        }
+
+        if (pending.awaiting === 'start') {
+          await askDueDate(ctx, { ...pending, startDate: typed });
+          return;
+        }
+
+        if (pending.startDate && typed < pending.startDate) {
+          await ctx.reply(
+            fmt.esc(`The deadline cannot be before ${pending.startDate}. Try another date.`),
+            md,
+          );
+          return;
+        }
+        await finishReport(ctx, auth, { ...pending, dueDate: typed });
         return;
       }
 

@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { badRequest, forbidden, notFound } from '../../lib/errors.js';
+import { badRequest, conflict, forbidden, notFound } from '../../lib/errors.js';
 import { paged, skipTake } from '../../lib/http.js';
 import { prisma } from '../../lib/prisma.js';
 import { getAuth } from '../../middleware/auth.js';
@@ -11,6 +11,41 @@ import type { Prisma } from '../../generated/prisma/client.js';
 import type { IssueStatus } from '../../generated/prisma/enums.js';
 import { assertProjectScope, nextIssueKey, nextTaskKey } from '../tasks/tasks.service.js';
 import * as svc from './issues.service.js';
+import { planTaskSyncForIssueStatus, syncTasksToIssueStatus } from './issueTaskSync.js';
+import {
+  ISSUE_STATUS_LABEL,
+  allowedTransitions,
+  refuseTransition,
+  transitionTable,
+} from './issueWorkflow.js';
+
+/**
+ * Turns a refused transition into the right HTTP error.
+ *
+ * A move that no role may make is a 409 — the issue is in the wrong state, and
+ * retrying as somebody else will not help. A move that only wants a permission
+ * is a 403.
+ */
+const assertTransition = (
+  from: IssueStatus,
+  to: IssueStatus,
+  can: (permission: string) => boolean,
+) => {
+  const refusal = refuseTransition(from, to, can);
+  if (!refusal) return;
+  throw refusal.code === 'NEEDS_PERMISSION'
+    ? forbidden(refusal.message)
+    : conflict(refusal.message, { from, to });
+};
+
+/** A deadline before the start date is a typo, not a plan. */
+const assertDateOrder = (startDate?: Date | null, dueDate?: Date | null) => {
+  if (startDate && dueDate && startDate.getTime() > dueDate.getTime()) {
+    throw badRequest('The deadline cannot be earlier than the start date', {
+      fieldErrors: { dueDate: 'Must be on or after the start date' },
+    });
+  }
+};
 
 const OPEN_STATUSES: IssueStatus[] = [
   'OPEN',
@@ -36,7 +71,8 @@ type ListQuery = {
   unassigned?: boolean;
   overdue?: boolean;
   openOnly: boolean;
-  sort: 'createdAt' | 'updatedAt' | 'severity' | 'priority' | 'dueDate' | 'status';
+  hasTasks?: boolean;
+  sort: 'createdAt' | 'updatedAt' | 'severity' | 'priority' | 'dueDate' | 'startDate' | 'status';
   order: 'asc' | 'desc';
   groupBy: 'none' | 'status' | 'severity' | 'assignee' | 'phase';
 };
@@ -67,6 +103,7 @@ const buildWhere = async (req: Request, query: ListQuery): Promise<Prisma.IssueW
     ...(query.labelId ? { labels: { some: { labelId: { in: query.labelId } } } } : {}),
     ...(query.releaseId ? { releaseId: query.releaseId } : {}),
     ...(query.overdue ? { dueDate: { lt: new Date() }, status: { in: OPEN_STATUSES } } : {}),
+    ...(query.hasTasks === undefined ? {} : query.hasTasks ? { tasks: { some: {} } } : { tasks: { none: {} } }),
     ...(query.search
       ? {
           OR: [
@@ -90,11 +127,13 @@ export const listIssues = async (req: Request, res: Response) => {
         ? [{ priority: query.order === 'asc' ? 'asc' : 'desc' }, { createdAt: 'desc' }]
         : query.sort === 'dueDate'
           ? [{ dueDate: { sort: query.order, nulls: 'last' } }]
-          : query.sort === 'status'
-            ? [{ status: query.order }, { createdAt: 'desc' }]
-            : query.sort === 'updatedAt'
-              ? [{ updatedAt: query.order }]
-              : [{ createdAt: query.order }];
+          : query.sort === 'startDate'
+            ? [{ startDate: { sort: query.order, nulls: 'last' } }]
+            : query.sort === 'status'
+              ? [{ status: query.order }, { createdAt: 'desc' }]
+              : query.sort === 'updatedAt'
+                ? [{ updatedAt: query.order }]
+                : [{ createdAt: query.order }];
 
   const [issues, total] = await Promise.all([
     prisma.issue.findMany({ where, ...skipTake(query), orderBy, select: svc.issueListSelect }),
@@ -166,6 +205,7 @@ export const createIssue = async (req: Request, res: Response) => {
     taskId?: string | null;
     releaseId?: string | null;
     labelIds?: string[];
+    startDate?: Date | null;
     dueDate?: Date | null;
   };
 
@@ -191,6 +231,8 @@ export const createIssue = async (req: Request, res: Response) => {
     if (task?.projectId !== projectId) throw badRequest('That task is not part of this project');
   }
 
+  assertDateOrder(body.startDate, body.dueDate);
+
   const issue = await prisma.$transaction(async (tx) => {
     const key = await nextIssueKey(tx, projectId);
     return tx.issue.create({
@@ -210,6 +252,7 @@ export const createIssue = async (req: Request, res: Response) => {
         releaseId: body.releaseId ?? null,
         reporterId: auth.id,
         status: body.assigneeId ? 'ASSIGNED' : 'OPEN',
+        ...(body.startDate !== undefined ? { startDate: body.startDate } : {}),
         ...(body.dueDate !== undefined ? { dueDate: body.dueDate } : {}),
         ...(body.labelIds?.length
           ? { labels: { create: body.labelIds.map((labelId) => ({ labelId })) } }
@@ -219,6 +262,12 @@ export const createIssue = async (req: Request, res: Response) => {
       select: svc.issueDetailSelect,
     });
   });
+
+  // `taskId` names the primary fix; the reverse link is what makes it show up
+  // in the issue's task list.
+  if (body.taskId) {
+    await prisma.task.update({ where: { id: body.taskId }, data: { issueId: issue.id } });
+  }
 
   await logActivity({
     actorId: auth.id,
@@ -296,6 +345,7 @@ export const updateIssue = async (req: Request, res: Response) => {
       assigneeId: true,
       taskId: true,
       releaseId: true,
+      startDate: true,
       dueDate: true,
       reopenCount: true,
     },
@@ -309,6 +359,15 @@ export const updateIssue = async (req: Request, res: Response) => {
   if (touchesStatus && !can('issue:change_status')) throw forbidden('You cannot change issue status');
   if (touchesAssignee && !can('issue:assign')) throw forbidden('You cannot assign issues');
   if (touchesOther && !can('issue:update')) throw forbidden('You cannot edit this issue');
+
+  // The workflow table decides whether this particular move is legal, and
+  // whether this actor's role may make it.
+  if (touchesStatus) assertTransition(before.status, body.status as IssueStatus, can);
+
+  assertDateOrder(
+    (body.startDate as Date | null | undefined) ?? before.startDate,
+    (body.dueDate as Date | null | undefined) ?? before.dueDate,
+  );
 
   await assertProjectScope(ref.projectId, {
     phaseId: body.phaseId as string | null | undefined,
@@ -326,9 +385,19 @@ export const updateIssue = async (req: Request, res: Response) => {
     statusSideEffects.closedAt = next === 'CLOSED' || next === 'WONT_FIX' ? new Date() : null;
     if (next === 'REOPENED') statusSideEffects.reopenCount = before.reopenCount + 1;
   }
-  if (touchesAssignee && body.assigneeId && before.status === 'OPEN') {
+  // Assigning an untouched issue moves it to Assigned — unless the same
+  // request named a status, which is the more specific instruction. Without the
+  // guard, `{ status: 'IN_PROGRESS', assigneeId: x }` on an open issue landed
+  // in Assigned and silently dropped the status the caller asked for.
+  if (!touchesStatus && touchesAssignee && body.assigneeId && before.status === 'OPEN') {
     statusSideEffects.status = 'ASSIGNED';
   }
+
+  // Worked out before the transaction opens, so it costs the transaction one
+  // statement rather than three round trips.
+  const taskSyncPlan = touchesStatus
+    ? await planTaskSyncForIssueStatus(ref.id, body.status as IssueStatus)
+    : null;
 
   const issue = await prisma.$transaction(async (tx) => {
     if (labelIds) {
@@ -345,6 +414,10 @@ export const updateIssue = async (req: Request, res: Response) => {
         skipDuplicates: true,
       });
     }
+    if (body.taskId && body.taskId !== before.taskId) {
+      await tx.task.update({ where: { id: String(body.taskId) }, data: { issueId: ref.id } });
+    }
+    await syncTasksToIssueStatus(tx, ref.id, taskSyncPlan);
     return tx.issue.update({
       where: { id: ref.id },
       data: { ...scalars, ...statusSideEffects },
@@ -365,6 +438,7 @@ export const updateIssue = async (req: Request, res: Response) => {
     'assigneeId',
     'taskId',
     'releaseId',
+    'startDate',
     'dueDate',
   ]);
 
@@ -473,6 +547,12 @@ export const changeStatus = async (req: Request, res: Response) => {
     return;
   }
 
+  assertTransition(before.status, body.status, (permission) =>
+    auth.isSuperAdmin || access.permissions.has(permission),
+  );
+
+  const taskSyncPlan = await planTaskSyncForIssueStatus(ref.id, body.status);
+
   const issue = await prisma.$transaction(async (tx) => {
     if (body.comment) {
       await tx.comment.create({
@@ -485,6 +565,7 @@ export const changeStatus = async (req: Request, res: Response) => {
         },
       });
     }
+    await syncTasksToIssueStatus(tx, ref.id, taskSyncPlan);
     return tx.issue.update({
       where: { id: ref.id },
       data: {
@@ -573,7 +654,14 @@ export const toggleWatch = async (req: Request, res: Response) => {
   res.json({ watching: true });
 };
 
-/** Creates (or links) the task that will carry the fix. */
+/**
+ * Raises a task to work on this issue.
+ *
+ * An issue can have as many tasks as the work needs — "write the migration",
+ * "fix the handler", "add the regression test" — so this no longer refuses once
+ * a task exists. The first task also becomes the issue's primary `task`, which
+ * is what the single-link UI and the Telegram cards still read.
+ */
 export const convertToTask = async (req: Request, res: Response) => {
   const auth = getAuth(req);
   const ref = await svc.findIssueRef(String(req.params.issueId));
@@ -590,10 +678,10 @@ export const convertToTask = async (req: Request, res: Response) => {
       phaseId: true,
       assigneeId: true,
       taskId: true,
+      startDate: true,
       dueDate: true,
     },
   });
-  if (issue.taskId) throw badRequest('This issue is already linked to a task');
 
   const status = await prisma.taskStatus.findFirst({
     where: { projectId: ref.projectId, isDefault: true },
@@ -605,27 +693,60 @@ export const convertToTask = async (req: Request, res: Response) => {
     select: { id: true },
   });
 
+  const body = (req.body ?? {}) as {
+    title?: string;
+    assigneeIds?: string[];
+    startDate?: string | null;
+    dueDate?: string | null;
+  };
+
+  const assigneeIds = body.assigneeIds?.length
+    ? body.assigneeIds
+    : issue.assigneeId
+      ? [issue.assigneeId]
+      : [];
+
+  if (assigneeIds.length && !auth.isSuperAdmin && !access.permissions.has('task:assign')) {
+    const onlySelf = assigneeIds.every((id) => id === auth.id);
+    if (!onlySelf) throw forbidden('You can only assign work to yourself on this project');
+  }
+  await assertProjectScope(ref.projectId, { assigneeIds });
+
+  const title = body.title?.trim()
+    ? body.title.trim().slice(0, 300)
+    : issue.taskId
+      ? `${issue.key}: follow-up`
+      : `Fix ${issue.key}: ${issue.title}`;
+
   const task = await prisma.$transaction(async (tx) => {
     const key = await nextTaskKey(tx, ref.projectId);
     const created = await tx.task.create({
       data: {
         key,
         projectId: ref.projectId,
-        title: `Fix ${issue.key}: ${issue.title}`,
-        description: issue.description,
+        title,
+        description: issue.taskId ? null : issue.description,
         type: 'BUG',
         priority: issue.priority,
         statusId: status?.id ?? fallback.id,
         phaseId: issue.phaseId,
         qaStatus: 'PENDING',
         reporterId: auth.id,
-        dueDate: issue.dueDate,
-        ...(issue.assigneeId ? { assignees: { create: { userId: issue.assigneeId } } } : {}),
+        issueId: ref.id,
+        startDate: body.startDate ? new Date(body.startDate) : issue.startDate,
+        dueDate: body.dueDate ? new Date(body.dueDate) : issue.dueDate,
+        ...(assigneeIds.length
+          ? { assignees: { create: assigneeIds.map((userId) => ({ userId })) } }
+          : {}),
         watchers: { create: { userId: auth.id } },
       },
       select: { id: true, key: true, title: true },
     });
-    await tx.issue.update({ where: { id: ref.id }, data: { taskId: created.id } });
+    // The primary link is set once and left alone, so "fix in KIRI-12" keeps
+    // pointing at the task people already know about.
+    if (!issue.taskId) {
+      await tx.issue.update({ where: { id: ref.id }, data: { taskId: created.id } });
+    }
     return created;
   });
 
@@ -637,8 +758,254 @@ export const convertToTask = async (req: Request, res: Response) => {
     projectId: ref.projectId,
     issueId: ref.id,
     taskId: task.id,
-    meta: { taskKey: task.key },
+    meta: { taskKey: task.key, issueKey: issue.key },
   });
 
+  if (assigneeIds.length) {
+    await notify({
+      userIds: assigneeIds,
+      event: 'TASK_ASSIGNED',
+      title: `${task.key}: ${task.title}`,
+      body: [
+        `Assigned by: ${auth.user.name}`,
+        `Fixes: ${issue.key} — ${issue.title}`,
+        `Description: ${shortDescription(issue.description)}`,
+      ].join('\n'),
+      url: `/projects/${access.projectKey}/tasks/${task.key}`,
+      actorId: auth.id,
+      projectId: ref.projectId,
+      taskId: task.id,
+      telegramButtons: [
+        [
+          { text: '▶️ Start', callbackData: `task:start:${task.id}` },
+          { text: '✅ Done', callbackData: `task:done:${task.id}` },
+        ],
+      ],
+    });
+  }
+
   res.status(201).json({ data: task, url: `/projects/${access.projectKey}/tasks/${task.key}` });
+};
+
+// --- Workflow -------------------------------------------------------------
+
+/** The whole status table, so the UI can show who may make which move. */
+export const getWorkflow = async (_req: Request, res: Response) => {
+  res.json({ data: transitionTable() });
+};
+
+/** The moves this viewer can make on this issue right now. */
+export const getTransitions = async (req: Request, res: Response) => {
+  const auth = getAuth(req);
+  const ref = await svc.findIssueRef(String(req.params.issueId));
+  const access = await auth.requireProject(ref.projectId, 'issue:view');
+  const issue = await prisma.issue.findUniqueOrThrow({
+    where: { id: ref.id },
+    select: { status: true },
+  });
+
+  const can = (permission: string) => auth.isSuperAdmin || access.permissions.has(permission);
+  const allowed = can('issue:change_status') ? allowedTransitions(issue.status, can) : [];
+
+  res.json({
+    data: {
+      status: issue.status,
+      allowed,
+      blocked: (Object.keys(ISSUE_STATUS_LABEL) as IssueStatus[])
+        .filter((status) => status !== issue.status && !allowed.includes(status))
+        .map((status) => ({
+          status,
+          reason: refuseTransition(issue.status, status, can)?.message ?? null,
+        })),
+    },
+  });
+};
+
+/** Changes one field across many issues at once. */
+export const bulkUpdate = async (req: Request, res: Response) => {
+  const auth = getAuth(req);
+  const body = req.body as {
+    issueIds: string[];
+    status?: IssueStatus;
+    severity?: 'MAJOR';
+    priority?: 'MEDIUM';
+    phaseId?: string | null;
+    assigneeId?: string | null;
+    startDate?: Date | null;
+    dueDate?: Date | null;
+    addLabelIds?: string[];
+    removeLabelIds?: string[];
+  };
+
+  const issues = await prisma.issue.findMany({
+    where: { id: { in: body.issueIds } },
+    select: {
+      id: true,
+      key: true,
+      title: true,
+      status: true,
+      projectId: true,
+      reopenCount: true,
+      startDate: true,
+      dueDate: true,
+      project: { select: { key: true } },
+    },
+  });
+  if (issues.length === 0) throw notFound('No matching issues');
+
+  const projectIds = [...new Set(issues.map((issue) => issue.projectId))];
+  const permissionsByProject = new Map<string, (permission: string) => boolean>();
+
+  for (const projectId of projectIds) {
+    const access = await auth.requireProject(projectId, 'issue:view');
+    const can = (permission: string) => auth.isSuperAdmin || access.permissions.has(permission);
+    permissionsByProject.set(projectId, can);
+
+    const touchesOther = Object.keys(body).some(
+      (key) => !['issueIds', 'status', 'assigneeId'].includes(key),
+    );
+    if (body.status !== undefined && !can('issue:change_status')) {
+      throw forbidden('You cannot change issue status on one of these projects');
+    }
+    if (body.assigneeId !== undefined && !can('issue:assign')) {
+      throw forbidden('You cannot assign issues on one of these projects');
+    }
+    if (touchesOther && !can('issue:update')) {
+      throw forbidden('You cannot edit issues on one of these projects');
+    }
+  }
+
+  if (projectIds.length > 1 && (body.phaseId !== undefined || body.assigneeId !== undefined)) {
+    throw badRequest(
+      'Environments and people are project-specific — bulk edit one project at a time',
+    );
+  }
+
+  // Everything is checked before anything is written: a bulk edit that moved
+  // half the list and then refused would be worse than one that refused.
+  if (body.status !== undefined) {
+    for (const issue of issues) {
+      if (issue.status === body.status) continue;
+      assertTransition(issue.status, body.status, permissionsByProject.get(issue.projectId)!);
+    }
+  }
+  for (const issue of issues) {
+    assertDateOrder(
+      body.startDate !== undefined ? body.startDate : issue.startDate,
+      body.dueDate !== undefined ? body.dueDate : issue.dueDate,
+    );
+  }
+
+  if (projectIds[0]) {
+    await assertProjectScope(projectIds[0], {
+      phaseId: body.phaseId,
+      labelIds: [...(body.addLabelIds ?? []), ...(body.removeLabelIds ?? [])],
+      ...(body.assigneeId ? { assigneeIds: [body.assigneeId] } : {}),
+    });
+  }
+
+  const scalars: Record<string, unknown> = {};
+  if (body.severity) scalars.severity = body.severity;
+  if (body.priority) scalars.priority = body.priority;
+  if (body.phaseId !== undefined) scalars.phaseId = body.phaseId;
+  if (body.assigneeId !== undefined) scalars.assigneeId = body.assigneeId;
+  if (body.startDate !== undefined) scalars.startDate = body.startDate;
+  if (body.dueDate !== undefined) scalars.dueDate = body.dueDate;
+
+  const ids = issues.map((issue) => issue.id);
+  const moved = body.status !== undefined ? issues.filter((i) => i.status !== body.status) : [];
+
+  // Planned up front, so the transaction only ever writes.
+  const taskSyncPlans = new Map<string, { statusId: string } | null>();
+  for (const issue of moved) {
+    taskSyncPlans.set(issue.id, await planTaskSyncForIssueStatus(issue.id, body.status!));
+  }
+
+  await prisma.$transaction(async (tx) => {
+    if (Object.keys(scalars).length) {
+      await tx.issue.updateMany({ where: { id: { in: ids } }, data: scalars });
+    }
+    if (body.status !== undefined && moved.length) {
+      const next = body.status;
+      // `reopenCount` is per-issue, so a reopen cannot be one updateMany.
+      for (const issue of moved) {
+        await syncTasksToIssueStatus(tx, issue.id, taskSyncPlans.get(issue.id) ?? null);
+        await tx.issue.update({
+          where: { id: issue.id },
+          data: {
+            status: next,
+            resolvedAt: next === 'RESOLVED' ? new Date() : null,
+            closedAt: next === 'CLOSED' || next === 'WONT_FIX' ? new Date() : null,
+            ...(next === 'REOPENED' ? { reopenCount: issue.reopenCount + 1 } : {}),
+          },
+        });
+      }
+    }
+    if (body.assigneeId) {
+      await tx.issueWatcher.createMany({
+        data: ids.map((issueId) => ({ issueId, userId: body.assigneeId! })),
+        skipDuplicates: true,
+      });
+    }
+    if (body.removeLabelIds?.length) {
+      await tx.issueLabel.deleteMany({
+        where: { issueId: { in: ids }, labelId: { in: body.removeLabelIds } },
+      });
+    }
+    if (body.addLabelIds?.length) {
+      await tx.issueLabel.createMany({
+        data: ids.flatMap((issueId) => body.addLabelIds!.map((labelId) => ({ issueId, labelId }))),
+        skipDuplicates: true,
+      });
+    }
+  });
+
+  const editedFields = Object.keys(body).filter((field) => field !== 'issueIds');
+
+  await logActivity({
+    actorId: auth.id,
+    action: 'issue.bulk_updated',
+    entityType: 'ISSUE',
+    entityId: ids[0]!,
+    projectId: projectIds[0]!,
+    meta: { count: ids.length, fields: editedFields },
+  });
+
+  for (const issue of issues) {
+    const url = svc.issueUrl(issue.project.key, issue.key);
+    const audience = await svc.issueAudience(issue.id);
+    const wasMoved = moved.some((entry) => entry.id === issue.id);
+
+    if (wasMoved) {
+      await notify({
+        userIds: audience,
+        event: 'ISSUE_STATUS_CHANGED',
+        title: `${issue.key} → ${ISSUE_STATUS_LABEL[body.status!]}`,
+        body: `${auth.user.name} moved “${issue.title}” from ${ISSUE_STATUS_LABEL[issue.status]} to ${ISSUE_STATUS_LABEL[body.status!]}.`,
+        url,
+        actorId: auth.id,
+        projectId: issue.projectId,
+        issueId: issue.id,
+      });
+    }
+
+    const otherFields = editedFields.filter((field) => field !== 'status');
+    if (otherFields.length > 0) {
+      await notify({
+        userIds: audience,
+        event: 'ISSUE_UPDATED',
+        title: `${issue.key} was updated`,
+        body: [
+          `Updated by: ${auth.user.name}`,
+          `Changed: ${changedFieldNames(otherFields)}`,
+        ].join('\n'),
+        url,
+        actorId: auth.id,
+        projectId: issue.projectId,
+        issueId: issue.id,
+      });
+    }
+  }
+
+  res.json({ updated: ids.length, moved: moved.length });
 };

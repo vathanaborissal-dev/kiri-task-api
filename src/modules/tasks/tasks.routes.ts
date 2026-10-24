@@ -49,6 +49,15 @@ tasksRouter.post(
 tasksRouter.delete('/:taskId', asyncHandler(controller.deleteTask));
 tasksRouter.post('/:taskId/watch', asyncHandler(controller.toggleWatch));
 
+// Pulling in a second pair of hands, separately from replacing the assignees.
+tasksRouter.post(
+  '/:taskId/helpers',
+  writeLimiter,
+  validate({ body: schemas.addHelperSchema }),
+  asyncHandler(controller.addHelper),
+);
+tasksRouter.delete('/:taskId/helpers/:userId', asyncHandler(controller.removeHelper));
+
 tasksRouter.post(
   '/:taskId/checklist',
   validate({ body: schemas.checklistItemSchema }),

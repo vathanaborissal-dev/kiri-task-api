@@ -95,13 +95,14 @@ export const issueMenu = async (auth: AuthContext, issueId: string): Promise<Men
       description: true,
       severity: true,
       status: true,
+      startDate: true,
       dueDate: true,
       projectId: true,
       phase: { select: { name: true } },
       project: { select: { key: true } },
       assignee: { select: { name: true } },
       reporter: { select: { name: true } },
-      _count: { select: { comments: true, attachments: true } },
+      _count: { select: { comments: true, attachments: true, tasks: true } },
     },
   });
   if (!issue) throw new AppError(404, 'NOT_FOUND', 'Issue not found');
@@ -118,9 +119,11 @@ export const issueMenu = async (auth: AuthContext, issueId: string): Promise<Men
     `Status: ${fmt.esc(fmt.humanStatus(issue.status))}`,
     `Severity: ${fmt.esc(issue.severity.toLowerCase())}`,
     issue.phase ? `Environment: ${fmt.esc(issue.phase.name)}` : null,
+    issue.startDate ? `Starts: ${fmt.esc(formatDate(issue.startDate, auth.user.timezone))}` : null,
     issue.dueDate ? `Due: ${fmt.esc(formatDate(issue.dueDate, auth.user.timezone))}` : null,
     `Reported by: ${fmt.esc(issue.reporter.name)}`,
     issue.assignee ? `Assigned: ${fmt.esc(issue.assignee.name)}` : 'Unassigned',
+    issue._count.tasks ? `Tasks: ${issue._count.tasks}` : null,
     issue._count.attachments ? `Attachments: ${issue._count.attachments}` : null,
     describe(issue.description),
   ]

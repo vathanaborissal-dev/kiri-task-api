@@ -1,6 +1,7 @@
 import { prisma } from '../../lib/prisma.js';
-import { labelSummary, phaseSummary, userSummary } from '../shared/selectors.js';
+import { labelSummary, phaseSummary, statusSummary, userSummary } from '../shared/selectors.js';
 import { notFound } from '../../lib/errors.js';
+import { ISSUE_STATUS_LABEL } from './issueWorkflow.js';
 
 export const issueListSelect = {
   id: true,
@@ -9,6 +10,7 @@ export const issueListSelect = {
   status: true,
   severity: true,
   priority: true,
+  startDate: true,
   dueDate: true,
   resolvedAt: true,
   closedAt: true,
@@ -22,7 +24,7 @@ export const issueListSelect = {
   task: { select: { id: true, key: true, title: true } },
   release: { select: { id: true, version: true } },
   labels: { select: { label: { select: labelSummary } } },
-  _count: { select: { comments: true, attachments: true, hotfixes: true } },
+  _count: { select: { comments: true, attachments: true, hotfixes: true, tasks: true } },
 } as const;
 
 export const issueDetailSelect = {
@@ -32,6 +34,24 @@ export const issueDetailSelect = {
   expectedResult: true,
   actualResult: true,
   watchers: { select: { user: { select: userSummary } } },
+  // One issue, many tasks: the detail page lists them rather than showing a
+  // single "fix task" link, which is all `task` used to give.
+  tasks: {
+    select: {
+      id: true,
+      key: true,
+      title: true,
+      type: true,
+      priority: true,
+      progress: true,
+      startDate: true,
+      dueDate: true,
+      completedAt: true,
+      status: { select: statusSummary },
+      assignees: { select: { user: { select: userSummary } } },
+    },
+    orderBy: { position: 'asc' },
+  },
   hotfixes: {
     select: { id: true, key: true, title: true, status: true, severity: true },
   },
@@ -54,22 +74,57 @@ export const issueDetailSelect = {
 type RawIssue = {
   labels?: { label: unknown }[];
   watchers?: { user: unknown }[];
+  tasks?: { assignees?: { user: unknown }[]; [key: string]: unknown }[];
   _count?: Record<string, number>;
   [key: string]: unknown;
 };
 
 export const shapeIssue = <T extends RawIssue>(issue: T) => {
-  const { labels, watchers, _count, ...rest } = issue;
+  const { labels, watchers, tasks, _count, ...rest } = issue;
+  const shapedTasks = (tasks ?? []).map((task) => ({
+    ...task,
+    assignees: (task.assignees ?? []).map((a) => a.user),
+  }));
+
   return {
     ...rest,
     labels: (labels ?? []).map((l) => l.label),
     ...(watchers ? { watchers: watchers.map((w) => w.user) } : {}),
+    ...(tasks ? { tasks: shapedTasks, taskProgress: rollUpTaskProgress(shapedTasks) } : {}),
     counts: {
       comments: _count?.comments ?? 0,
       attachments: _count?.attachments ?? 0,
       hotfixes: _count?.hotfixes ?? 0,
+      tasks: _count?.tasks ?? (tasks?.length ?? 0),
     },
   };
+};
+
+type ShapedTask = { [key: string]: unknown };
+
+const categoryOf = (task: ShapedTask): string | undefined =>
+  (task.status as { category?: string } | null | undefined)?.category;
+
+const progressOf = (task: ShapedTask): number =>
+  typeof task.progress === 'number' ? task.progress : 0;
+
+/**
+ * How far along an issue is, taken from its tasks.
+ *
+ * A task's own percentage is used where it has one; a finished task counts as
+ * 100 and a cancelled one is left out of the average entirely, so dropping a
+ * task does not make the issue look like it went backwards.
+ */
+export const rollUpTaskProgress = (tasks: ShapedTask[]) => {
+  const counted = tasks.filter((task) => categoryOf(task) !== 'CANCELED');
+  if (counted.length === 0) return { percent: 0, done: 0, total: tasks.length };
+
+  const done = counted.filter((task) => categoryOf(task) === 'DONE').length;
+  const sum = counted.reduce(
+    (total, task) => total + (categoryOf(task) === 'DONE' ? 100 : progressOf(task)),
+    0,
+  );
+  return { percent: Math.round(sum / counted.length), done, total: counted.length };
 };
 
 export const findIssueRef = async (idOrKey: string) => {
@@ -126,13 +181,8 @@ export const SEVERITY_LABEL: Record<string, string> = {
   BLOCKER: 'Blocker',
 };
 
-export const STATUS_LABEL: Record<string, string> = {
-  OPEN: 'Open',
-  ASSIGNED: 'Assigned',
-  IN_PROGRESS: 'In Progress',
-  READY_FOR_TESTING: 'Ready for Testing',
-  RESOLVED: 'Resolved',
-  CLOSED: 'Closed',
-  REOPENED: 'Reopened',
-  WONT_FIX: "Won't Fix",
-};
+/**
+ * Re-exported from the workflow module so the labels used in notifications and
+ * the labels used in the transition table can never drift apart.
+ */
+export const STATUS_LABEL: Record<string, string> = ISSUE_STATUS_LABEL;

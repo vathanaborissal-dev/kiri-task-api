@@ -19,6 +19,16 @@ export type PendingAction =
       title: string;
       description?: string;
       severity?: string;
+      phaseId?: string | null;
+      /** ISO `YYYY-MM-DD`, set once the start-date step is answered. */
+      startDate?: string | null;
+      dueDate?: string | null;
+      /**
+       * Which date the bot is waiting for. Set so a typed `2026-11-03` can be
+       * matched to the right field — the buttons alone cannot cover every date
+       * somebody might want.
+       */
+      awaiting?: 'start' | 'due';
     }
   | { kind: 'report:attachment'; issueId: string; projectId: string };
 

@@ -487,6 +487,10 @@ model Task {
   milestoneId String?
   milestone   Milestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
 
+  /// The issue this task works towards. One issue can have many tasks.
+  issueId String?
+  issue   Issue?  @relation("IssueTasks", fields: [issueId], references: [id], onDelete: SetNull)
+
   releaseId String?
   release   Release? @relation(fields: [releaseId], references: [id], onDelete: SetNull)
 
@@ -495,6 +499,8 @@ model Task {
   completedAt   DateTime?
   estimateHours Float?
   spentHours    Float?
+  /// Self-reported completion, 0-100. Forced to 100 by a DONE status.
+  progress      Int       @default(0)
   /// Board ordering within a status column.
   position      Float     @default(0)
 
@@ -511,7 +517,8 @@ model Task {
   attachments    Attachment[]
   activities     ActivityLog[]
   notifications  Notification[]
-  issues         Issue[]
+  /// Issues that nominate this task as their primary fix.
+  issues         Issue[]         @relation("IssuePrimaryTask")
   hotfixes       Hotfix[]
   dailyPlanItems DailyPlanItem[]
 
@@ -524,6 +531,7 @@ model Task {
   @@index([parentTaskId])
   @@index([releaseId])
   @@index([milestoneId])
+  @@index([issueId])
 }
 
 model TaskAssignee {
@@ -611,14 +619,17 @@ model Issue {
   assigneeId String?
   assignee   User?   @relation("IssueAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
 
+  /// When work on the fix is meant to begin.
+  startDate   DateTime?
+  /// When the fix is due — the issue form's "end date".
   dueDate     DateTime?
   resolvedAt  DateTime?
   closedAt    DateTime?
   reopenCount Int       @default(0)
 
-  /// The task that implements the fix.
+  /// The task that carries the fix. Kept as the primary one of `tasks`.
   taskId String?
-  task   Task?   @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  task   Task?   @relation("IssuePrimaryTask", fields: [taskId], references: [id], onDelete: SetNull)
 
   releaseId String?
   release   Release? @relation(fields: [releaseId], references: [id], onDelete: SetNull)
@@ -633,6 +644,8 @@ model Issue {
   activities    ActivityLog[]
   notifications Notification[]
   hotfixes      Hotfix[]
+  /// Every task raised to resolve this issue.
+  tasks         Task[]         @relation("IssueTasks")
 
   @@index([projectId, status])
   @@index([projectId, severity])

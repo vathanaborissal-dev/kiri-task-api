@@ -77,7 +77,9 @@ export const PERMISSIONS: PermissionDefinition[] = [
   def('issue:update', 'Edit issues', 'Edit issue details, severity and priority.', 'Issues', 'BOTH'),
   def('issue:delete', 'Delete issues', 'Delete issues.', 'Issues', 'BOTH'),
   def('issue:assign', 'Assign issues', 'Assign issues to team members.', 'Issues', 'BOTH'),
-  def('issue:change_status', 'Change issue status', 'Move issues through the workflow, including reopening.', 'Issues', 'BOTH'),
+  def('issue:change_status', 'Change issue status', 'Move issues through the workflow.', 'Issues', 'BOTH'),
+  def('issue:close', 'Close issues', "Mark an issue closed or won't fix.", 'Issues', 'BOTH'),
+  def('issue:reopen', 'Reopen issues', 'Reopen an issue that was resolved, closed or dismissed.', 'Issues', 'BOTH'),
 
   // --- Releases & hotfixes --------------------------------------------------
   def('release:view', 'View releases', 'See releases, versions and deployment history.', 'Releases', 'BOTH'),

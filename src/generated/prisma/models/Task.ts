@@ -29,12 +29,14 @@ export type AggregateTask = {
 export type TaskAvgAggregateOutputType = {
   estimateHours: number | null
   spentHours: number | null
+  progress: number | null
   position: number | null
 }
 
 export type TaskSumAggregateOutputType = {
   estimateHours: number | null
   spentHours: number | null
+  progress: number | null
   position: number | null
 }
 
@@ -52,12 +54,14 @@ export type TaskMinAggregateOutputType = {
   reporterId: string | null
   parentTaskId: string | null
   milestoneId: string | null
+  issueId: string | null
   releaseId: string | null
   startDate: Date | null
   dueDate: Date | null
   completedAt: Date | null
   estimateHours: number | null
   spentHours: number | null
+  progress: number | null
   position: number | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -77,12 +81,14 @@ export type TaskMaxAggregateOutputType = {
   reporterId: string | null
   parentTaskId: string | null
   milestoneId: string | null
+  issueId: string | null
   releaseId: string | null
   startDate: Date | null
   dueDate: Date | null
   completedAt: Date | null
   estimateHours: number | null
   spentHours: number | null
+  progress: number | null
   position: number | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -102,12 +108,14 @@ export type TaskCountAggregateOutputType = {
   reporterId: number
   parentTaskId: number
   milestoneId: number
+  issueId: number
   releaseId: number
   startDate: number
   dueDate: number
   completedAt: number
   estimateHours: number
   spentHours: number
+  progress: number
   position: number
   createdAt: number
   updatedAt: number
@@ -118,12 +126,14 @@ export type TaskCountAggregateOutputType = {
 export type TaskAvgAggregateInputType = {
   estimateHours?: true
   spentHours?: true
+  progress?: true
   position?: true
 }
 
 export type TaskSumAggregateInputType = {
   estimateHours?: true
   spentHours?: true
+  progress?: true
   position?: true
 }
 
@@ -141,12 +151,14 @@ export type TaskMinAggregateInputType = {
   reporterId?: true
   parentTaskId?: true
   milestoneId?: true
+  issueId?: true
   releaseId?: true
   startDate?: true
   dueDate?: true
   completedAt?: true
   estimateHours?: true
   spentHours?: true
+  progress?: true
   position?: true
   createdAt?: true
   updatedAt?: true
@@ -166,12 +178,14 @@ export type TaskMaxAggregateInputType = {
   reporterId?: true
   parentTaskId?: true
   milestoneId?: true
+  issueId?: true
   releaseId?: true
   startDate?: true
   dueDate?: true
   completedAt?: true
   estimateHours?: true
   spentHours?: true
+  progress?: true
   position?: true
   createdAt?: true
   updatedAt?: true
@@ -191,12 +205,14 @@ export type TaskCountAggregateInputType = {
   reporterId?: true
   parentTaskId?: true
   milestoneId?: true
+  issueId?: true
   releaseId?: true
   startDate?: true
   dueDate?: true
   completedAt?: true
   estimateHours?: true
   spentHours?: true
+  progress?: true
   position?: true
   createdAt?: true
   updatedAt?: true
@@ -303,12 +319,14 @@ export type TaskGroupByOutputType = {
   reporterId: string
   parentTaskId: string | null
   milestoneId: string | null
+  issueId: string | null
   releaseId: string | null
   startDate: Date | null
   dueDate: Date | null
   completedAt: Date | null
   estimateHours: number | null
   spentHours: number | null
+  progress: number
   position: number
   createdAt: Date
   updatedAt: Date
@@ -351,12 +369,14 @@ export type TaskWhereInput = {
   reporterId?: Prisma.StringFilter<"Task"> | string
   parentTaskId?: Prisma.StringNullableFilter<"Task"> | string | null
   milestoneId?: Prisma.StringNullableFilter<"Task"> | string | null
+  issueId?: Prisma.StringNullableFilter<"Task"> | string | null
   releaseId?: Prisma.StringNullableFilter<"Task"> | string | null
   startDate?: Prisma.DateTimeNullableFilter<"Task"> | Date | string | null
   dueDate?: Prisma.DateTimeNullableFilter<"Task"> | Date | string | null
   completedAt?: Prisma.DateTimeNullableFilter<"Task"> | Date | string | null
   estimateHours?: Prisma.FloatNullableFilter<"Task"> | number | null
   spentHours?: Prisma.FloatNullableFilter<"Task"> | number | null
+  progress?: Prisma.IntFilter<"Task"> | number
   position?: Prisma.FloatFilter<"Task"> | number
   createdAt?: Prisma.DateTimeFilter<"Task"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Task"> | Date | string
@@ -367,6 +387,7 @@ export type TaskWhereInput = {
   parentTask?: Prisma.XOR<Prisma.TaskNullableScalarRelationFilter, Prisma.TaskWhereInput> | null
   subtasks?: Prisma.TaskListRelationFilter
   milestone?: Prisma.XOR<Prisma.MilestoneNullableScalarRelationFilter, Prisma.MilestoneWhereInput> | null
+  issue?: Prisma.XOR<Prisma.IssueNullableScalarRelationFilter, Prisma.IssueWhereInput> | null
   release?: Prisma.XOR<Prisma.ReleaseNullableScalarRelationFilter, Prisma.ReleaseWhereInput> | null
   assignees?: Prisma.TaskAssigneeListRelationFilter
   watchers?: Prisma.TaskWatcherListRelationFilter
@@ -397,12 +418,14 @@ export type TaskOrderByWithRelationInput = {
   reporterId?: Prisma.SortOrder
   parentTaskId?: Prisma.SortOrderInput | Prisma.SortOrder
   milestoneId?: Prisma.SortOrderInput | Prisma.SortOrder
+  issueId?: Prisma.SortOrderInput | Prisma.SortOrder
   releaseId?: Prisma.SortOrderInput | Prisma.SortOrder
   startDate?: Prisma.SortOrderInput | Prisma.SortOrder
   dueDate?: Prisma.SortOrderInput | Prisma.SortOrder
   completedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   estimateHours?: Prisma.SortOrderInput | Prisma.SortOrder
   spentHours?: Prisma.SortOrderInput | Prisma.SortOrder
+  progress?: Prisma.SortOrder
   position?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -413,6 +436,7 @@ export type TaskOrderByWithRelationInput = {
   parentTask?: Prisma.TaskOrderByWithRelationInput
   subtasks?: Prisma.TaskOrderByRelationAggregateInput
   milestone?: Prisma.MilestoneOrderByWithRelationInput
+  issue?: Prisma.IssueOrderByWithRelationInput
   release?: Prisma.ReleaseOrderByWithRelationInput
   assignees?: Prisma.TaskAssigneeOrderByRelationAggregateInput
   watchers?: Prisma.TaskWatcherOrderByRelationAggregateInput
@@ -446,12 +470,14 @@ export type TaskWhereUniqueInput = Prisma.AtLeast<{
   reporterId?: Prisma.StringFilter<"Task"> | string
   parentTaskId?: Prisma.StringNullableFilter<"Task"> | string | null
   milestoneId?: Prisma.StringNullableFilter<"Task"> | string | null
+  issueId?: Prisma.StringNullableFilter<"Task"> | string | null
   releaseId?: Prisma.StringNullableFilter<"Task"> | string | null
   startDate?: Prisma.DateTimeNullableFilter<"Task"> | Date | string | null
   dueDate?: Prisma.DateTimeNullableFilter<"Task"> | Date | string | null
   completedAt?: Prisma.DateTimeNullableFilter<"Task"> | Date | string | null
   estimateHours?: Prisma.FloatNullableFilter<"Task"> | number | null
   spentHours?: Prisma.FloatNullableFilter<"Task"> | number | null
+  progress?: Prisma.IntFilter<"Task"> | number
   position?: Prisma.FloatFilter<"Task"> | number
   createdAt?: Prisma.DateTimeFilter<"Task"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Task"> | Date | string
@@ -462,6 +488,7 @@ export type TaskWhereUniqueInput = Prisma.AtLeast<{
   parentTask?: Prisma.XOR<Prisma.TaskNullableScalarRelationFilter, Prisma.TaskWhereInput> | null
   subtasks?: Prisma.TaskListRelationFilter
   milestone?: Prisma.XOR<Prisma.MilestoneNullableScalarRelationFilter, Prisma.MilestoneWhereInput> | null
+  issue?: Prisma.XOR<Prisma.IssueNullableScalarRelationFilter, Prisma.IssueWhereInput> | null
   release?: Prisma.XOR<Prisma.ReleaseNullableScalarRelationFilter, Prisma.ReleaseWhereInput> | null
   assignees?: Prisma.TaskAssigneeListRelationFilter
   watchers?: Prisma.TaskWatcherListRelationFilter
@@ -492,12 +519,14 @@ export type TaskOrderByWithAggregationInput = {
   reporterId?: Prisma.SortOrder
   parentTaskId?: Prisma.SortOrderInput | Prisma.SortOrder
   milestoneId?: Prisma.SortOrderInput | Prisma.SortOrder
+  issueId?: Prisma.SortOrderInput | Prisma.SortOrder
   releaseId?: Prisma.SortOrderInput | Prisma.SortOrder
   startDate?: Prisma.SortOrderInput | Prisma.SortOrder
   dueDate?: Prisma.SortOrderInput | Prisma.SortOrder
   completedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   estimateHours?: Prisma.SortOrderInput | Prisma.SortOrder
   spentHours?: Prisma.SortOrderInput | Prisma.SortOrder
+  progress?: Prisma.SortOrder
   position?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -525,12 +554,14 @@ export type TaskScalarWhereWithAggregatesInput = {
   reporterId?: Prisma.StringWithAggregatesFilter<"Task"> | string
   parentTaskId?: Prisma.StringNullableWithAggregatesFilter<"Task"> | string | null
   milestoneId?: Prisma.StringNullableWithAggregatesFilter<"Task"> | string | null
+  issueId?: Prisma.StringNullableWithAggregatesFilter<"Task"> | string | null
   releaseId?: Prisma.StringNullableWithAggregatesFilter<"Task"> | string | null
   startDate?: Prisma.DateTimeNullableWithAggregatesFilter<"Task"> | Date | string | null
   dueDate?: Prisma.DateTimeNullableWithAggregatesFilter<"Task"> | Date | string | null
   completedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Task"> | Date | string | null
   estimateHours?: Prisma.FloatNullableWithAggregatesFilter<"Task"> | number | null
   spentHours?: Prisma.FloatNullableWithAggregatesFilter<"Task"> | number | null
+  progress?: Prisma.IntWithAggregatesFilter<"Task"> | number
   position?: Prisma.FloatWithAggregatesFilter<"Task"> | number
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Task"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Task"> | Date | string
@@ -549,6 +580,7 @@ export type TaskCreateInput = {
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -559,6 +591,7 @@ export type TaskCreateInput = {
   parentTask?: Prisma.TaskCreateNestedOneWithoutSubtasksInput
   subtasks?: Prisma.TaskCreateNestedManyWithoutParentTaskInput
   milestone?: Prisma.MilestoneCreateNestedOneWithoutTasksInput
+  issue?: Prisma.IssueCreateNestedOneWithoutTasksInput
   release?: Prisma.ReleaseCreateNestedOneWithoutTasksInput
   assignees?: Prisma.TaskAssigneeCreateNestedManyWithoutTaskInput
   watchers?: Prisma.TaskWatcherCreateNestedManyWithoutTaskInput
@@ -589,12 +622,14 @@ export type TaskUncheckedCreateInput = {
   reporterId: string
   parentTaskId?: string | null
   milestoneId?: string | null
+  issueId?: string | null
   releaseId?: string | null
   startDate?: Date | string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -627,6 +662,7 @@ export type TaskUpdateInput = {
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -637,6 +673,7 @@ export type TaskUpdateInput = {
   parentTask?: Prisma.TaskUpdateOneWithoutSubtasksNestedInput
   subtasks?: Prisma.TaskUpdateManyWithoutParentTaskNestedInput
   milestone?: Prisma.MilestoneUpdateOneWithoutTasksNestedInput
+  issue?: Prisma.IssueUpdateOneWithoutTasksNestedInput
   release?: Prisma.ReleaseUpdateOneWithoutTasksNestedInput
   assignees?: Prisma.TaskAssigneeUpdateManyWithoutTaskNestedInput
   watchers?: Prisma.TaskWatcherUpdateManyWithoutTaskNestedInput
@@ -667,12 +704,14 @@ export type TaskUncheckedUpdateInput = {
   reporterId?: Prisma.StringFieldUpdateOperationsInput | string
   parentTaskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   milestoneId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  issueId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   releaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -706,12 +745,14 @@ export type TaskCreateManyInput = {
   reporterId: string
   parentTaskId?: string | null
   milestoneId?: string | null
+  issueId?: string | null
   releaseId?: string | null
   startDate?: Date | string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -730,6 +771,7 @@ export type TaskUpdateManyMutationInput = {
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -749,12 +791,14 @@ export type TaskUncheckedUpdateManyInput = {
   reporterId?: Prisma.StringFieldUpdateOperationsInput | string
   parentTaskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   milestoneId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  issueId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   releaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -789,12 +833,14 @@ export type TaskCountOrderByAggregateInput = {
   reporterId?: Prisma.SortOrder
   parentTaskId?: Prisma.SortOrder
   milestoneId?: Prisma.SortOrder
+  issueId?: Prisma.SortOrder
   releaseId?: Prisma.SortOrder
   startDate?: Prisma.SortOrder
   dueDate?: Prisma.SortOrder
   completedAt?: Prisma.SortOrder
   estimateHours?: Prisma.SortOrder
   spentHours?: Prisma.SortOrder
+  progress?: Prisma.SortOrder
   position?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -803,6 +849,7 @@ export type TaskCountOrderByAggregateInput = {
 export type TaskAvgOrderByAggregateInput = {
   estimateHours?: Prisma.SortOrder
   spentHours?: Prisma.SortOrder
+  progress?: Prisma.SortOrder
   position?: Prisma.SortOrder
 }
 
@@ -820,12 +867,14 @@ export type TaskMaxOrderByAggregateInput = {
   reporterId?: Prisma.SortOrder
   parentTaskId?: Prisma.SortOrder
   milestoneId?: Prisma.SortOrder
+  issueId?: Prisma.SortOrder
   releaseId?: Prisma.SortOrder
   startDate?: Prisma.SortOrder
   dueDate?: Prisma.SortOrder
   completedAt?: Prisma.SortOrder
   estimateHours?: Prisma.SortOrder
   spentHours?: Prisma.SortOrder
+  progress?: Prisma.SortOrder
   position?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -845,12 +894,14 @@ export type TaskMinOrderByAggregateInput = {
   reporterId?: Prisma.SortOrder
   parentTaskId?: Prisma.SortOrder
   milestoneId?: Prisma.SortOrder
+  issueId?: Prisma.SortOrder
   releaseId?: Prisma.SortOrder
   startDate?: Prisma.SortOrder
   dueDate?: Prisma.SortOrder
   completedAt?: Prisma.SortOrder
   estimateHours?: Prisma.SortOrder
   spentHours?: Prisma.SortOrder
+  progress?: Prisma.SortOrder
   position?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -859,6 +910,7 @@ export type TaskMinOrderByAggregateInput = {
 export type TaskSumOrderByAggregateInput = {
   estimateHours?: Prisma.SortOrder
   spentHours?: Prisma.SortOrder
+  progress?: Prisma.SortOrder
   position?: Prisma.SortOrder
 }
 
@@ -1253,6 +1305,20 @@ export type TaskCreateNestedOneWithoutIssuesInput = {
   connect?: Prisma.TaskWhereUniqueInput
 }
 
+export type TaskCreateNestedManyWithoutIssueInput = {
+  create?: Prisma.XOR<Prisma.TaskCreateWithoutIssueInput, Prisma.TaskUncheckedCreateWithoutIssueInput> | Prisma.TaskCreateWithoutIssueInput[] | Prisma.TaskUncheckedCreateWithoutIssueInput[]
+  connectOrCreate?: Prisma.TaskCreateOrConnectWithoutIssueInput | Prisma.TaskCreateOrConnectWithoutIssueInput[]
+  createMany?: Prisma.TaskCreateManyIssueInputEnvelope
+  connect?: Prisma.TaskWhereUniqueInput | Prisma.TaskWhereUniqueInput[]
+}
+
+export type TaskUncheckedCreateNestedManyWithoutIssueInput = {
+  create?: Prisma.XOR<Prisma.TaskCreateWithoutIssueInput, Prisma.TaskUncheckedCreateWithoutIssueInput> | Prisma.TaskCreateWithoutIssueInput[] | Prisma.TaskUncheckedCreateWithoutIssueInput[]
+  connectOrCreate?: Prisma.TaskCreateOrConnectWithoutIssueInput | Prisma.TaskCreateOrConnectWithoutIssueInput[]
+  createMany?: Prisma.TaskCreateManyIssueInputEnvelope
+  connect?: Prisma.TaskWhereUniqueInput | Prisma.TaskWhereUniqueInput[]
+}
+
 export type TaskUpdateOneWithoutIssuesNestedInput = {
   create?: Prisma.XOR<Prisma.TaskCreateWithoutIssuesInput, Prisma.TaskUncheckedCreateWithoutIssuesInput>
   connectOrCreate?: Prisma.TaskCreateOrConnectWithoutIssuesInput
@@ -1261,6 +1327,34 @@ export type TaskUpdateOneWithoutIssuesNestedInput = {
   delete?: Prisma.TaskWhereInput | boolean
   connect?: Prisma.TaskWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.TaskUpdateToOneWithWhereWithoutIssuesInput, Prisma.TaskUpdateWithoutIssuesInput>, Prisma.TaskUncheckedUpdateWithoutIssuesInput>
+}
+
+export type TaskUpdateManyWithoutIssueNestedInput = {
+  create?: Prisma.XOR<Prisma.TaskCreateWithoutIssueInput, Prisma.TaskUncheckedCreateWithoutIssueInput> | Prisma.TaskCreateWithoutIssueInput[] | Prisma.TaskUncheckedCreateWithoutIssueInput[]
+  connectOrCreate?: Prisma.TaskCreateOrConnectWithoutIssueInput | Prisma.TaskCreateOrConnectWithoutIssueInput[]
+  upsert?: Prisma.TaskUpsertWithWhereUniqueWithoutIssueInput | Prisma.TaskUpsertWithWhereUniqueWithoutIssueInput[]
+  createMany?: Prisma.TaskCreateManyIssueInputEnvelope
+  set?: Prisma.TaskWhereUniqueInput | Prisma.TaskWhereUniqueInput[]
+  disconnect?: Prisma.TaskWhereUniqueInput | Prisma.TaskWhereUniqueInput[]
+  delete?: Prisma.TaskWhereUniqueInput | Prisma.TaskWhereUniqueInput[]
+  connect?: Prisma.TaskWhereUniqueInput | Prisma.TaskWhereUniqueInput[]
+  update?: Prisma.TaskUpdateWithWhereUniqueWithoutIssueInput | Prisma.TaskUpdateWithWhereUniqueWithoutIssueInput[]
+  updateMany?: Prisma.TaskUpdateManyWithWhereWithoutIssueInput | Prisma.TaskUpdateManyWithWhereWithoutIssueInput[]
+  deleteMany?: Prisma.TaskScalarWhereInput | Prisma.TaskScalarWhereInput[]
+}
+
+export type TaskUncheckedUpdateManyWithoutIssueNestedInput = {
+  create?: Prisma.XOR<Prisma.TaskCreateWithoutIssueInput, Prisma.TaskUncheckedCreateWithoutIssueInput> | Prisma.TaskCreateWithoutIssueInput[] | Prisma.TaskUncheckedCreateWithoutIssueInput[]
+  connectOrCreate?: Prisma.TaskCreateOrConnectWithoutIssueInput | Prisma.TaskCreateOrConnectWithoutIssueInput[]
+  upsert?: Prisma.TaskUpsertWithWhereUniqueWithoutIssueInput | Prisma.TaskUpsertWithWhereUniqueWithoutIssueInput[]
+  createMany?: Prisma.TaskCreateManyIssueInputEnvelope
+  set?: Prisma.TaskWhereUniqueInput | Prisma.TaskWhereUniqueInput[]
+  disconnect?: Prisma.TaskWhereUniqueInput | Prisma.TaskWhereUniqueInput[]
+  delete?: Prisma.TaskWhereUniqueInput | Prisma.TaskWhereUniqueInput[]
+  connect?: Prisma.TaskWhereUniqueInput | Prisma.TaskWhereUniqueInput[]
+  update?: Prisma.TaskUpdateWithWhereUniqueWithoutIssueInput | Prisma.TaskUpdateWithWhereUniqueWithoutIssueInput[]
+  updateMany?: Prisma.TaskUpdateManyWithWhereWithoutIssueInput | Prisma.TaskUpdateManyWithWhereWithoutIssueInput[]
+  deleteMany?: Prisma.TaskScalarWhereInput | Prisma.TaskScalarWhereInput[]
 }
 
 export type TaskCreateNestedManyWithoutReleaseInput = {
@@ -1414,6 +1508,7 @@ export type TaskCreateWithoutReporterInput = {
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1423,6 +1518,7 @@ export type TaskCreateWithoutReporterInput = {
   parentTask?: Prisma.TaskCreateNestedOneWithoutSubtasksInput
   subtasks?: Prisma.TaskCreateNestedManyWithoutParentTaskInput
   milestone?: Prisma.MilestoneCreateNestedOneWithoutTasksInput
+  issue?: Prisma.IssueCreateNestedOneWithoutTasksInput
   release?: Prisma.ReleaseCreateNestedOneWithoutTasksInput
   assignees?: Prisma.TaskAssigneeCreateNestedManyWithoutTaskInput
   watchers?: Prisma.TaskWatcherCreateNestedManyWithoutTaskInput
@@ -1452,12 +1548,14 @@ export type TaskUncheckedCreateWithoutReporterInput = {
   qaStatus?: $Enums.QaStatus
   parentTaskId?: string | null
   milestoneId?: string | null
+  issueId?: string | null
   releaseId?: string | null
   startDate?: Date | string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1520,12 +1618,14 @@ export type TaskScalarWhereInput = {
   reporterId?: Prisma.StringFilter<"Task"> | string
   parentTaskId?: Prisma.StringNullableFilter<"Task"> | string | null
   milestoneId?: Prisma.StringNullableFilter<"Task"> | string | null
+  issueId?: Prisma.StringNullableFilter<"Task"> | string | null
   releaseId?: Prisma.StringNullableFilter<"Task"> | string | null
   startDate?: Prisma.DateTimeNullableFilter<"Task"> | Date | string | null
   dueDate?: Prisma.DateTimeNullableFilter<"Task"> | Date | string | null
   completedAt?: Prisma.DateTimeNullableFilter<"Task"> | Date | string | null
   estimateHours?: Prisma.FloatNullableFilter<"Task"> | number | null
   spentHours?: Prisma.FloatNullableFilter<"Task"> | number | null
+  progress?: Prisma.IntFilter<"Task"> | number
   position?: Prisma.FloatFilter<"Task"> | number
   createdAt?: Prisma.DateTimeFilter<"Task"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Task"> | Date | string
@@ -1544,6 +1644,7 @@ export type TaskCreateWithoutProjectInput = {
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1553,6 +1654,7 @@ export type TaskCreateWithoutProjectInput = {
   parentTask?: Prisma.TaskCreateNestedOneWithoutSubtasksInput
   subtasks?: Prisma.TaskCreateNestedManyWithoutParentTaskInput
   milestone?: Prisma.MilestoneCreateNestedOneWithoutTasksInput
+  issue?: Prisma.IssueCreateNestedOneWithoutTasksInput
   release?: Prisma.ReleaseCreateNestedOneWithoutTasksInput
   assignees?: Prisma.TaskAssigneeCreateNestedManyWithoutTaskInput
   watchers?: Prisma.TaskWatcherCreateNestedManyWithoutTaskInput
@@ -1582,12 +1684,14 @@ export type TaskUncheckedCreateWithoutProjectInput = {
   reporterId: string
   parentTaskId?: string | null
   milestoneId?: string | null
+  issueId?: string | null
   releaseId?: string | null
   startDate?: Date | string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1646,6 +1750,7 @@ export type TaskCreateWithoutPhaseInput = {
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1655,6 +1760,7 @@ export type TaskCreateWithoutPhaseInput = {
   parentTask?: Prisma.TaskCreateNestedOneWithoutSubtasksInput
   subtasks?: Prisma.TaskCreateNestedManyWithoutParentTaskInput
   milestone?: Prisma.MilestoneCreateNestedOneWithoutTasksInput
+  issue?: Prisma.IssueCreateNestedOneWithoutTasksInput
   release?: Prisma.ReleaseCreateNestedOneWithoutTasksInput
   assignees?: Prisma.TaskAssigneeCreateNestedManyWithoutTaskInput
   watchers?: Prisma.TaskWatcherCreateNestedManyWithoutTaskInput
@@ -1684,12 +1790,14 @@ export type TaskUncheckedCreateWithoutPhaseInput = {
   reporterId: string
   parentTaskId?: string | null
   milestoneId?: string | null
+  issueId?: string | null
   releaseId?: string | null
   startDate?: Date | string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1748,6 +1856,7 @@ export type TaskCreateWithoutStatusInput = {
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1757,6 +1866,7 @@ export type TaskCreateWithoutStatusInput = {
   parentTask?: Prisma.TaskCreateNestedOneWithoutSubtasksInput
   subtasks?: Prisma.TaskCreateNestedManyWithoutParentTaskInput
   milestone?: Prisma.MilestoneCreateNestedOneWithoutTasksInput
+  issue?: Prisma.IssueCreateNestedOneWithoutTasksInput
   release?: Prisma.ReleaseCreateNestedOneWithoutTasksInput
   assignees?: Prisma.TaskAssigneeCreateNestedManyWithoutTaskInput
   watchers?: Prisma.TaskWatcherCreateNestedManyWithoutTaskInput
@@ -1786,12 +1896,14 @@ export type TaskUncheckedCreateWithoutStatusInput = {
   reporterId: string
   parentTaskId?: string | null
   milestoneId?: string | null
+  issueId?: string | null
   releaseId?: string | null
   startDate?: Date | string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1850,6 +1962,7 @@ export type TaskCreateWithoutMilestoneInput = {
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1859,6 +1972,7 @@ export type TaskCreateWithoutMilestoneInput = {
   reporter: Prisma.UserCreateNestedOneWithoutReportedTasksInput
   parentTask?: Prisma.TaskCreateNestedOneWithoutSubtasksInput
   subtasks?: Prisma.TaskCreateNestedManyWithoutParentTaskInput
+  issue?: Prisma.IssueCreateNestedOneWithoutTasksInput
   release?: Prisma.ReleaseCreateNestedOneWithoutTasksInput
   assignees?: Prisma.TaskAssigneeCreateNestedManyWithoutTaskInput
   watchers?: Prisma.TaskWatcherCreateNestedManyWithoutTaskInput
@@ -1888,12 +2002,14 @@ export type TaskUncheckedCreateWithoutMilestoneInput = {
   qaStatus?: $Enums.QaStatus
   reporterId: string
   parentTaskId?: string | null
+  issueId?: string | null
   releaseId?: string | null
   startDate?: Date | string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1952,6 +2068,7 @@ export type TaskCreateWithoutSubtasksInput = {
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1961,6 +2078,7 @@ export type TaskCreateWithoutSubtasksInput = {
   reporter: Prisma.UserCreateNestedOneWithoutReportedTasksInput
   parentTask?: Prisma.TaskCreateNestedOneWithoutSubtasksInput
   milestone?: Prisma.MilestoneCreateNestedOneWithoutTasksInput
+  issue?: Prisma.IssueCreateNestedOneWithoutTasksInput
   release?: Prisma.ReleaseCreateNestedOneWithoutTasksInput
   assignees?: Prisma.TaskAssigneeCreateNestedManyWithoutTaskInput
   watchers?: Prisma.TaskWatcherCreateNestedManyWithoutTaskInput
@@ -1991,12 +2109,14 @@ export type TaskUncheckedCreateWithoutSubtasksInput = {
   reporterId: string
   parentTaskId?: string | null
   milestoneId?: string | null
+  issueId?: string | null
   releaseId?: string | null
   startDate?: Date | string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2033,6 +2153,7 @@ export type TaskCreateWithoutParentTaskInput = {
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2042,6 +2163,7 @@ export type TaskCreateWithoutParentTaskInput = {
   reporter: Prisma.UserCreateNestedOneWithoutReportedTasksInput
   subtasks?: Prisma.TaskCreateNestedManyWithoutParentTaskInput
   milestone?: Prisma.MilestoneCreateNestedOneWithoutTasksInput
+  issue?: Prisma.IssueCreateNestedOneWithoutTasksInput
   release?: Prisma.ReleaseCreateNestedOneWithoutTasksInput
   assignees?: Prisma.TaskAssigneeCreateNestedManyWithoutTaskInput
   watchers?: Prisma.TaskWatcherCreateNestedManyWithoutTaskInput
@@ -2071,12 +2193,14 @@ export type TaskUncheckedCreateWithoutParentTaskInput = {
   qaStatus?: $Enums.QaStatus
   reporterId: string
   milestoneId?: string | null
+  issueId?: string | null
   releaseId?: string | null
   startDate?: Date | string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2130,6 +2254,7 @@ export type TaskUpdateWithoutSubtasksInput = {
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2139,6 +2264,7 @@ export type TaskUpdateWithoutSubtasksInput = {
   reporter?: Prisma.UserUpdateOneRequiredWithoutReportedTasksNestedInput
   parentTask?: Prisma.TaskUpdateOneWithoutSubtasksNestedInput
   milestone?: Prisma.MilestoneUpdateOneWithoutTasksNestedInput
+  issue?: Prisma.IssueUpdateOneWithoutTasksNestedInput
   release?: Prisma.ReleaseUpdateOneWithoutTasksNestedInput
   assignees?: Prisma.TaskAssigneeUpdateManyWithoutTaskNestedInput
   watchers?: Prisma.TaskWatcherUpdateManyWithoutTaskNestedInput
@@ -2169,12 +2295,14 @@ export type TaskUncheckedUpdateWithoutSubtasksInput = {
   reporterId?: Prisma.StringFieldUpdateOperationsInput | string
   parentTaskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   milestoneId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  issueId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   releaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2222,6 +2350,7 @@ export type TaskCreateWithoutAssigneesInput = {
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2232,6 +2361,7 @@ export type TaskCreateWithoutAssigneesInput = {
   parentTask?: Prisma.TaskCreateNestedOneWithoutSubtasksInput
   subtasks?: Prisma.TaskCreateNestedManyWithoutParentTaskInput
   milestone?: Prisma.MilestoneCreateNestedOneWithoutTasksInput
+  issue?: Prisma.IssueCreateNestedOneWithoutTasksInput
   release?: Prisma.ReleaseCreateNestedOneWithoutTasksInput
   watchers?: Prisma.TaskWatcherCreateNestedManyWithoutTaskInput
   labels?: Prisma.TaskLabelCreateNestedManyWithoutTaskInput
@@ -2261,12 +2391,14 @@ export type TaskUncheckedCreateWithoutAssigneesInput = {
   reporterId: string
   parentTaskId?: string | null
   milestoneId?: string | null
+  issueId?: string | null
   releaseId?: string | null
   startDate?: Date | string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2314,6 +2446,7 @@ export type TaskUpdateWithoutAssigneesInput = {
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2324,6 +2457,7 @@ export type TaskUpdateWithoutAssigneesInput = {
   parentTask?: Prisma.TaskUpdateOneWithoutSubtasksNestedInput
   subtasks?: Prisma.TaskUpdateManyWithoutParentTaskNestedInput
   milestone?: Prisma.MilestoneUpdateOneWithoutTasksNestedInput
+  issue?: Prisma.IssueUpdateOneWithoutTasksNestedInput
   release?: Prisma.ReleaseUpdateOneWithoutTasksNestedInput
   watchers?: Prisma.TaskWatcherUpdateManyWithoutTaskNestedInput
   labels?: Prisma.TaskLabelUpdateManyWithoutTaskNestedInput
@@ -2353,12 +2487,14 @@ export type TaskUncheckedUpdateWithoutAssigneesInput = {
   reporterId?: Prisma.StringFieldUpdateOperationsInput | string
   parentTaskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   milestoneId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  issueId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   releaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2390,6 +2526,7 @@ export type TaskCreateWithoutWatchersInput = {
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2400,6 +2537,7 @@ export type TaskCreateWithoutWatchersInput = {
   parentTask?: Prisma.TaskCreateNestedOneWithoutSubtasksInput
   subtasks?: Prisma.TaskCreateNestedManyWithoutParentTaskInput
   milestone?: Prisma.MilestoneCreateNestedOneWithoutTasksInput
+  issue?: Prisma.IssueCreateNestedOneWithoutTasksInput
   release?: Prisma.ReleaseCreateNestedOneWithoutTasksInput
   assignees?: Prisma.TaskAssigneeCreateNestedManyWithoutTaskInput
   labels?: Prisma.TaskLabelCreateNestedManyWithoutTaskInput
@@ -2429,12 +2567,14 @@ export type TaskUncheckedCreateWithoutWatchersInput = {
   reporterId: string
   parentTaskId?: string | null
   milestoneId?: string | null
+  issueId?: string | null
   releaseId?: string | null
   startDate?: Date | string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2482,6 +2622,7 @@ export type TaskUpdateWithoutWatchersInput = {
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2492,6 +2633,7 @@ export type TaskUpdateWithoutWatchersInput = {
   parentTask?: Prisma.TaskUpdateOneWithoutSubtasksNestedInput
   subtasks?: Prisma.TaskUpdateManyWithoutParentTaskNestedInput
   milestone?: Prisma.MilestoneUpdateOneWithoutTasksNestedInput
+  issue?: Prisma.IssueUpdateOneWithoutTasksNestedInput
   release?: Prisma.ReleaseUpdateOneWithoutTasksNestedInput
   assignees?: Prisma.TaskAssigneeUpdateManyWithoutTaskNestedInput
   labels?: Prisma.TaskLabelUpdateManyWithoutTaskNestedInput
@@ -2521,12 +2663,14 @@ export type TaskUncheckedUpdateWithoutWatchersInput = {
   reporterId?: Prisma.StringFieldUpdateOperationsInput | string
   parentTaskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   milestoneId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  issueId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   releaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2558,6 +2702,7 @@ export type TaskCreateWithoutLabelsInput = {
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2568,6 +2713,7 @@ export type TaskCreateWithoutLabelsInput = {
   parentTask?: Prisma.TaskCreateNestedOneWithoutSubtasksInput
   subtasks?: Prisma.TaskCreateNestedManyWithoutParentTaskInput
   milestone?: Prisma.MilestoneCreateNestedOneWithoutTasksInput
+  issue?: Prisma.IssueCreateNestedOneWithoutTasksInput
   release?: Prisma.ReleaseCreateNestedOneWithoutTasksInput
   assignees?: Prisma.TaskAssigneeCreateNestedManyWithoutTaskInput
   watchers?: Prisma.TaskWatcherCreateNestedManyWithoutTaskInput
@@ -2597,12 +2743,14 @@ export type TaskUncheckedCreateWithoutLabelsInput = {
   reporterId: string
   parentTaskId?: string | null
   milestoneId?: string | null
+  issueId?: string | null
   releaseId?: string | null
   startDate?: Date | string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2650,6 +2798,7 @@ export type TaskUpdateWithoutLabelsInput = {
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2660,6 +2809,7 @@ export type TaskUpdateWithoutLabelsInput = {
   parentTask?: Prisma.TaskUpdateOneWithoutSubtasksNestedInput
   subtasks?: Prisma.TaskUpdateManyWithoutParentTaskNestedInput
   milestone?: Prisma.MilestoneUpdateOneWithoutTasksNestedInput
+  issue?: Prisma.IssueUpdateOneWithoutTasksNestedInput
   release?: Prisma.ReleaseUpdateOneWithoutTasksNestedInput
   assignees?: Prisma.TaskAssigneeUpdateManyWithoutTaskNestedInput
   watchers?: Prisma.TaskWatcherUpdateManyWithoutTaskNestedInput
@@ -2689,12 +2839,14 @@ export type TaskUncheckedUpdateWithoutLabelsInput = {
   reporterId?: Prisma.StringFieldUpdateOperationsInput | string
   parentTaskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   milestoneId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  issueId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   releaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2726,6 +2878,7 @@ export type TaskCreateWithoutChecklistInput = {
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2736,6 +2889,7 @@ export type TaskCreateWithoutChecklistInput = {
   parentTask?: Prisma.TaskCreateNestedOneWithoutSubtasksInput
   subtasks?: Prisma.TaskCreateNestedManyWithoutParentTaskInput
   milestone?: Prisma.MilestoneCreateNestedOneWithoutTasksInput
+  issue?: Prisma.IssueCreateNestedOneWithoutTasksInput
   release?: Prisma.ReleaseCreateNestedOneWithoutTasksInput
   assignees?: Prisma.TaskAssigneeCreateNestedManyWithoutTaskInput
   watchers?: Prisma.TaskWatcherCreateNestedManyWithoutTaskInput
@@ -2765,12 +2919,14 @@ export type TaskUncheckedCreateWithoutChecklistInput = {
   reporterId: string
   parentTaskId?: string | null
   milestoneId?: string | null
+  issueId?: string | null
   releaseId?: string | null
   startDate?: Date | string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2818,6 +2974,7 @@ export type TaskUpdateWithoutChecklistInput = {
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2828,6 +2985,7 @@ export type TaskUpdateWithoutChecklistInput = {
   parentTask?: Prisma.TaskUpdateOneWithoutSubtasksNestedInput
   subtasks?: Prisma.TaskUpdateManyWithoutParentTaskNestedInput
   milestone?: Prisma.MilestoneUpdateOneWithoutTasksNestedInput
+  issue?: Prisma.IssueUpdateOneWithoutTasksNestedInput
   release?: Prisma.ReleaseUpdateOneWithoutTasksNestedInput
   assignees?: Prisma.TaskAssigneeUpdateManyWithoutTaskNestedInput
   watchers?: Prisma.TaskWatcherUpdateManyWithoutTaskNestedInput
@@ -2857,12 +3015,14 @@ export type TaskUncheckedUpdateWithoutChecklistInput = {
   reporterId?: Prisma.StringFieldUpdateOperationsInput | string
   parentTaskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   milestoneId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  issueId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   releaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -2894,6 +3054,7 @@ export type TaskCreateWithoutLinksFromInput = {
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2904,6 +3065,7 @@ export type TaskCreateWithoutLinksFromInput = {
   parentTask?: Prisma.TaskCreateNestedOneWithoutSubtasksInput
   subtasks?: Prisma.TaskCreateNestedManyWithoutParentTaskInput
   milestone?: Prisma.MilestoneCreateNestedOneWithoutTasksInput
+  issue?: Prisma.IssueCreateNestedOneWithoutTasksInput
   release?: Prisma.ReleaseCreateNestedOneWithoutTasksInput
   assignees?: Prisma.TaskAssigneeCreateNestedManyWithoutTaskInput
   watchers?: Prisma.TaskWatcherCreateNestedManyWithoutTaskInput
@@ -2933,12 +3095,14 @@ export type TaskUncheckedCreateWithoutLinksFromInput = {
   reporterId: string
   parentTaskId?: string | null
   milestoneId?: string | null
+  issueId?: string | null
   releaseId?: string | null
   startDate?: Date | string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2975,6 +3139,7 @@ export type TaskCreateWithoutLinksToInput = {
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -2985,6 +3150,7 @@ export type TaskCreateWithoutLinksToInput = {
   parentTask?: Prisma.TaskCreateNestedOneWithoutSubtasksInput
   subtasks?: Prisma.TaskCreateNestedManyWithoutParentTaskInput
   milestone?: Prisma.MilestoneCreateNestedOneWithoutTasksInput
+  issue?: Prisma.IssueCreateNestedOneWithoutTasksInput
   release?: Prisma.ReleaseCreateNestedOneWithoutTasksInput
   assignees?: Prisma.TaskAssigneeCreateNestedManyWithoutTaskInput
   watchers?: Prisma.TaskWatcherCreateNestedManyWithoutTaskInput
@@ -3014,12 +3180,14 @@ export type TaskUncheckedCreateWithoutLinksToInput = {
   reporterId: string
   parentTaskId?: string | null
   milestoneId?: string | null
+  issueId?: string | null
   releaseId?: string | null
   startDate?: Date | string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3067,6 +3235,7 @@ export type TaskUpdateWithoutLinksFromInput = {
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3077,6 +3246,7 @@ export type TaskUpdateWithoutLinksFromInput = {
   parentTask?: Prisma.TaskUpdateOneWithoutSubtasksNestedInput
   subtasks?: Prisma.TaskUpdateManyWithoutParentTaskNestedInput
   milestone?: Prisma.MilestoneUpdateOneWithoutTasksNestedInput
+  issue?: Prisma.IssueUpdateOneWithoutTasksNestedInput
   release?: Prisma.ReleaseUpdateOneWithoutTasksNestedInput
   assignees?: Prisma.TaskAssigneeUpdateManyWithoutTaskNestedInput
   watchers?: Prisma.TaskWatcherUpdateManyWithoutTaskNestedInput
@@ -3106,12 +3276,14 @@ export type TaskUncheckedUpdateWithoutLinksFromInput = {
   reporterId?: Prisma.StringFieldUpdateOperationsInput | string
   parentTaskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   milestoneId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  issueId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   releaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3154,6 +3326,7 @@ export type TaskUpdateWithoutLinksToInput = {
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3164,6 +3337,7 @@ export type TaskUpdateWithoutLinksToInput = {
   parentTask?: Prisma.TaskUpdateOneWithoutSubtasksNestedInput
   subtasks?: Prisma.TaskUpdateManyWithoutParentTaskNestedInput
   milestone?: Prisma.MilestoneUpdateOneWithoutTasksNestedInput
+  issue?: Prisma.IssueUpdateOneWithoutTasksNestedInput
   release?: Prisma.ReleaseUpdateOneWithoutTasksNestedInput
   assignees?: Prisma.TaskAssigneeUpdateManyWithoutTaskNestedInput
   watchers?: Prisma.TaskWatcherUpdateManyWithoutTaskNestedInput
@@ -3193,12 +3367,14 @@ export type TaskUncheckedUpdateWithoutLinksToInput = {
   reporterId?: Prisma.StringFieldUpdateOperationsInput | string
   parentTaskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   milestoneId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  issueId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   releaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3230,6 +3406,7 @@ export type TaskCreateWithoutIssuesInput = {
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3240,6 +3417,7 @@ export type TaskCreateWithoutIssuesInput = {
   parentTask?: Prisma.TaskCreateNestedOneWithoutSubtasksInput
   subtasks?: Prisma.TaskCreateNestedManyWithoutParentTaskInput
   milestone?: Prisma.MilestoneCreateNestedOneWithoutTasksInput
+  issue?: Prisma.IssueCreateNestedOneWithoutTasksInput
   release?: Prisma.ReleaseCreateNestedOneWithoutTasksInput
   assignees?: Prisma.TaskAssigneeCreateNestedManyWithoutTaskInput
   watchers?: Prisma.TaskWatcherCreateNestedManyWithoutTaskInput
@@ -3269,12 +3447,14 @@ export type TaskUncheckedCreateWithoutIssuesInput = {
   reporterId: string
   parentTaskId?: string | null
   milestoneId?: string | null
+  issueId?: string | null
   releaseId?: string | null
   startDate?: Date | string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3296,6 +3476,96 @@ export type TaskUncheckedCreateWithoutIssuesInput = {
 export type TaskCreateOrConnectWithoutIssuesInput = {
   where: Prisma.TaskWhereUniqueInput
   create: Prisma.XOR<Prisma.TaskCreateWithoutIssuesInput, Prisma.TaskUncheckedCreateWithoutIssuesInput>
+}
+
+export type TaskCreateWithoutIssueInput = {
+  id?: string
+  key: string
+  title: string
+  description?: string | null
+  type?: $Enums.TaskType
+  priority?: $Enums.Priority
+  qaStatus?: $Enums.QaStatus
+  startDate?: Date | string | null
+  dueDate?: Date | string | null
+  completedAt?: Date | string | null
+  estimateHours?: number | null
+  spentHours?: number | null
+  progress?: number
+  position?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  project: Prisma.ProjectCreateNestedOneWithoutTasksInput
+  status: Prisma.TaskStatusCreateNestedOneWithoutTasksInput
+  phase?: Prisma.ProjectPhaseCreateNestedOneWithoutTasksInput
+  reporter: Prisma.UserCreateNestedOneWithoutReportedTasksInput
+  parentTask?: Prisma.TaskCreateNestedOneWithoutSubtasksInput
+  subtasks?: Prisma.TaskCreateNestedManyWithoutParentTaskInput
+  milestone?: Prisma.MilestoneCreateNestedOneWithoutTasksInput
+  release?: Prisma.ReleaseCreateNestedOneWithoutTasksInput
+  assignees?: Prisma.TaskAssigneeCreateNestedManyWithoutTaskInput
+  watchers?: Prisma.TaskWatcherCreateNestedManyWithoutTaskInput
+  labels?: Prisma.TaskLabelCreateNestedManyWithoutTaskInput
+  checklist?: Prisma.ChecklistItemCreateNestedManyWithoutTaskInput
+  linksFrom?: Prisma.TaskLinkCreateNestedManyWithoutSourceInput
+  linksTo?: Prisma.TaskLinkCreateNestedManyWithoutTargetInput
+  comments?: Prisma.CommentCreateNestedManyWithoutTaskInput
+  attachments?: Prisma.AttachmentCreateNestedManyWithoutTaskInput
+  activities?: Prisma.ActivityLogCreateNestedManyWithoutTaskInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutTaskInput
+  issues?: Prisma.IssueCreateNestedManyWithoutTaskInput
+  hotfixes?: Prisma.HotfixCreateNestedManyWithoutTaskInput
+  dailyPlanItems?: Prisma.DailyPlanItemCreateNestedManyWithoutTaskInput
+}
+
+export type TaskUncheckedCreateWithoutIssueInput = {
+  id?: string
+  key: string
+  projectId: string
+  title: string
+  description?: string | null
+  type?: $Enums.TaskType
+  priority?: $Enums.Priority
+  statusId: string
+  phaseId?: string | null
+  qaStatus?: $Enums.QaStatus
+  reporterId: string
+  parentTaskId?: string | null
+  milestoneId?: string | null
+  releaseId?: string | null
+  startDate?: Date | string | null
+  dueDate?: Date | string | null
+  completedAt?: Date | string | null
+  estimateHours?: number | null
+  spentHours?: number | null
+  progress?: number
+  position?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  subtasks?: Prisma.TaskUncheckedCreateNestedManyWithoutParentTaskInput
+  assignees?: Prisma.TaskAssigneeUncheckedCreateNestedManyWithoutTaskInput
+  watchers?: Prisma.TaskWatcherUncheckedCreateNestedManyWithoutTaskInput
+  labels?: Prisma.TaskLabelUncheckedCreateNestedManyWithoutTaskInput
+  checklist?: Prisma.ChecklistItemUncheckedCreateNestedManyWithoutTaskInput
+  linksFrom?: Prisma.TaskLinkUncheckedCreateNestedManyWithoutSourceInput
+  linksTo?: Prisma.TaskLinkUncheckedCreateNestedManyWithoutTargetInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutTaskInput
+  attachments?: Prisma.AttachmentUncheckedCreateNestedManyWithoutTaskInput
+  activities?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutTaskInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutTaskInput
+  issues?: Prisma.IssueUncheckedCreateNestedManyWithoutTaskInput
+  hotfixes?: Prisma.HotfixUncheckedCreateNestedManyWithoutTaskInput
+  dailyPlanItems?: Prisma.DailyPlanItemUncheckedCreateNestedManyWithoutTaskInput
+}
+
+export type TaskCreateOrConnectWithoutIssueInput = {
+  where: Prisma.TaskWhereUniqueInput
+  create: Prisma.XOR<Prisma.TaskCreateWithoutIssueInput, Prisma.TaskUncheckedCreateWithoutIssueInput>
+}
+
+export type TaskCreateManyIssueInputEnvelope = {
+  data: Prisma.TaskCreateManyIssueInput | Prisma.TaskCreateManyIssueInput[]
+  skipDuplicates?: boolean
 }
 
 export type TaskUpsertWithoutIssuesInput = {
@@ -3322,6 +3592,7 @@ export type TaskUpdateWithoutIssuesInput = {
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3332,6 +3603,7 @@ export type TaskUpdateWithoutIssuesInput = {
   parentTask?: Prisma.TaskUpdateOneWithoutSubtasksNestedInput
   subtasks?: Prisma.TaskUpdateManyWithoutParentTaskNestedInput
   milestone?: Prisma.MilestoneUpdateOneWithoutTasksNestedInput
+  issue?: Prisma.IssueUpdateOneWithoutTasksNestedInput
   release?: Prisma.ReleaseUpdateOneWithoutTasksNestedInput
   assignees?: Prisma.TaskAssigneeUpdateManyWithoutTaskNestedInput
   watchers?: Prisma.TaskWatcherUpdateManyWithoutTaskNestedInput
@@ -3361,12 +3633,14 @@ export type TaskUncheckedUpdateWithoutIssuesInput = {
   reporterId?: Prisma.StringFieldUpdateOperationsInput | string
   parentTaskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   milestoneId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  issueId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   releaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3385,6 +3659,22 @@ export type TaskUncheckedUpdateWithoutIssuesInput = {
   dailyPlanItems?: Prisma.DailyPlanItemUncheckedUpdateManyWithoutTaskNestedInput
 }
 
+export type TaskUpsertWithWhereUniqueWithoutIssueInput = {
+  where: Prisma.TaskWhereUniqueInput
+  update: Prisma.XOR<Prisma.TaskUpdateWithoutIssueInput, Prisma.TaskUncheckedUpdateWithoutIssueInput>
+  create: Prisma.XOR<Prisma.TaskCreateWithoutIssueInput, Prisma.TaskUncheckedCreateWithoutIssueInput>
+}
+
+export type TaskUpdateWithWhereUniqueWithoutIssueInput = {
+  where: Prisma.TaskWhereUniqueInput
+  data: Prisma.XOR<Prisma.TaskUpdateWithoutIssueInput, Prisma.TaskUncheckedUpdateWithoutIssueInput>
+}
+
+export type TaskUpdateManyWithWhereWithoutIssueInput = {
+  where: Prisma.TaskScalarWhereInput
+  data: Prisma.XOR<Prisma.TaskUpdateManyMutationInput, Prisma.TaskUncheckedUpdateManyWithoutIssueInput>
+}
+
 export type TaskCreateWithoutReleaseInput = {
   id?: string
   key: string
@@ -3398,6 +3688,7 @@ export type TaskCreateWithoutReleaseInput = {
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3408,6 +3699,7 @@ export type TaskCreateWithoutReleaseInput = {
   parentTask?: Prisma.TaskCreateNestedOneWithoutSubtasksInput
   subtasks?: Prisma.TaskCreateNestedManyWithoutParentTaskInput
   milestone?: Prisma.MilestoneCreateNestedOneWithoutTasksInput
+  issue?: Prisma.IssueCreateNestedOneWithoutTasksInput
   assignees?: Prisma.TaskAssigneeCreateNestedManyWithoutTaskInput
   watchers?: Prisma.TaskWatcherCreateNestedManyWithoutTaskInput
   labels?: Prisma.TaskLabelCreateNestedManyWithoutTaskInput
@@ -3437,11 +3729,13 @@ export type TaskUncheckedCreateWithoutReleaseInput = {
   reporterId: string
   parentTaskId?: string | null
   milestoneId?: string | null
+  issueId?: string | null
   startDate?: Date | string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3500,6 +3794,7 @@ export type TaskCreateWithoutHotfixesInput = {
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3510,6 +3805,7 @@ export type TaskCreateWithoutHotfixesInput = {
   parentTask?: Prisma.TaskCreateNestedOneWithoutSubtasksInput
   subtasks?: Prisma.TaskCreateNestedManyWithoutParentTaskInput
   milestone?: Prisma.MilestoneCreateNestedOneWithoutTasksInput
+  issue?: Prisma.IssueCreateNestedOneWithoutTasksInput
   release?: Prisma.ReleaseCreateNestedOneWithoutTasksInput
   assignees?: Prisma.TaskAssigneeCreateNestedManyWithoutTaskInput
   watchers?: Prisma.TaskWatcherCreateNestedManyWithoutTaskInput
@@ -3539,12 +3835,14 @@ export type TaskUncheckedCreateWithoutHotfixesInput = {
   reporterId: string
   parentTaskId?: string | null
   milestoneId?: string | null
+  issueId?: string | null
   releaseId?: string | null
   startDate?: Date | string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3592,6 +3890,7 @@ export type TaskUpdateWithoutHotfixesInput = {
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3602,6 +3901,7 @@ export type TaskUpdateWithoutHotfixesInput = {
   parentTask?: Prisma.TaskUpdateOneWithoutSubtasksNestedInput
   subtasks?: Prisma.TaskUpdateManyWithoutParentTaskNestedInput
   milestone?: Prisma.MilestoneUpdateOneWithoutTasksNestedInput
+  issue?: Prisma.IssueUpdateOneWithoutTasksNestedInput
   release?: Prisma.ReleaseUpdateOneWithoutTasksNestedInput
   assignees?: Prisma.TaskAssigneeUpdateManyWithoutTaskNestedInput
   watchers?: Prisma.TaskWatcherUpdateManyWithoutTaskNestedInput
@@ -3631,12 +3931,14 @@ export type TaskUncheckedUpdateWithoutHotfixesInput = {
   reporterId?: Prisma.StringFieldUpdateOperationsInput | string
   parentTaskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   milestoneId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  issueId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   releaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3668,6 +3970,7 @@ export type TaskCreateWithoutCommentsInput = {
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3678,6 +3981,7 @@ export type TaskCreateWithoutCommentsInput = {
   parentTask?: Prisma.TaskCreateNestedOneWithoutSubtasksInput
   subtasks?: Prisma.TaskCreateNestedManyWithoutParentTaskInput
   milestone?: Prisma.MilestoneCreateNestedOneWithoutTasksInput
+  issue?: Prisma.IssueCreateNestedOneWithoutTasksInput
   release?: Prisma.ReleaseCreateNestedOneWithoutTasksInput
   assignees?: Prisma.TaskAssigneeCreateNestedManyWithoutTaskInput
   watchers?: Prisma.TaskWatcherCreateNestedManyWithoutTaskInput
@@ -3707,12 +4011,14 @@ export type TaskUncheckedCreateWithoutCommentsInput = {
   reporterId: string
   parentTaskId?: string | null
   milestoneId?: string | null
+  issueId?: string | null
   releaseId?: string | null
   startDate?: Date | string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3760,6 +4066,7 @@ export type TaskUpdateWithoutCommentsInput = {
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3770,6 +4077,7 @@ export type TaskUpdateWithoutCommentsInput = {
   parentTask?: Prisma.TaskUpdateOneWithoutSubtasksNestedInput
   subtasks?: Prisma.TaskUpdateManyWithoutParentTaskNestedInput
   milestone?: Prisma.MilestoneUpdateOneWithoutTasksNestedInput
+  issue?: Prisma.IssueUpdateOneWithoutTasksNestedInput
   release?: Prisma.ReleaseUpdateOneWithoutTasksNestedInput
   assignees?: Prisma.TaskAssigneeUpdateManyWithoutTaskNestedInput
   watchers?: Prisma.TaskWatcherUpdateManyWithoutTaskNestedInput
@@ -3799,12 +4107,14 @@ export type TaskUncheckedUpdateWithoutCommentsInput = {
   reporterId?: Prisma.StringFieldUpdateOperationsInput | string
   parentTaskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   milestoneId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  issueId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   releaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3836,6 +4146,7 @@ export type TaskCreateWithoutAttachmentsInput = {
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3846,6 +4157,7 @@ export type TaskCreateWithoutAttachmentsInput = {
   parentTask?: Prisma.TaskCreateNestedOneWithoutSubtasksInput
   subtasks?: Prisma.TaskCreateNestedManyWithoutParentTaskInput
   milestone?: Prisma.MilestoneCreateNestedOneWithoutTasksInput
+  issue?: Prisma.IssueCreateNestedOneWithoutTasksInput
   release?: Prisma.ReleaseCreateNestedOneWithoutTasksInput
   assignees?: Prisma.TaskAssigneeCreateNestedManyWithoutTaskInput
   watchers?: Prisma.TaskWatcherCreateNestedManyWithoutTaskInput
@@ -3875,12 +4187,14 @@ export type TaskUncheckedCreateWithoutAttachmentsInput = {
   reporterId: string
   parentTaskId?: string | null
   milestoneId?: string | null
+  issueId?: string | null
   releaseId?: string | null
   startDate?: Date | string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -3928,6 +4242,7 @@ export type TaskUpdateWithoutAttachmentsInput = {
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -3938,6 +4253,7 @@ export type TaskUpdateWithoutAttachmentsInput = {
   parentTask?: Prisma.TaskUpdateOneWithoutSubtasksNestedInput
   subtasks?: Prisma.TaskUpdateManyWithoutParentTaskNestedInput
   milestone?: Prisma.MilestoneUpdateOneWithoutTasksNestedInput
+  issue?: Prisma.IssueUpdateOneWithoutTasksNestedInput
   release?: Prisma.ReleaseUpdateOneWithoutTasksNestedInput
   assignees?: Prisma.TaskAssigneeUpdateManyWithoutTaskNestedInput
   watchers?: Prisma.TaskWatcherUpdateManyWithoutTaskNestedInput
@@ -3967,12 +4283,14 @@ export type TaskUncheckedUpdateWithoutAttachmentsInput = {
   reporterId?: Prisma.StringFieldUpdateOperationsInput | string
   parentTaskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   milestoneId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  issueId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   releaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4004,6 +4322,7 @@ export type TaskCreateWithoutActivitiesInput = {
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -4014,6 +4333,7 @@ export type TaskCreateWithoutActivitiesInput = {
   parentTask?: Prisma.TaskCreateNestedOneWithoutSubtasksInput
   subtasks?: Prisma.TaskCreateNestedManyWithoutParentTaskInput
   milestone?: Prisma.MilestoneCreateNestedOneWithoutTasksInput
+  issue?: Prisma.IssueCreateNestedOneWithoutTasksInput
   release?: Prisma.ReleaseCreateNestedOneWithoutTasksInput
   assignees?: Prisma.TaskAssigneeCreateNestedManyWithoutTaskInput
   watchers?: Prisma.TaskWatcherCreateNestedManyWithoutTaskInput
@@ -4043,12 +4363,14 @@ export type TaskUncheckedCreateWithoutActivitiesInput = {
   reporterId: string
   parentTaskId?: string | null
   milestoneId?: string | null
+  issueId?: string | null
   releaseId?: string | null
   startDate?: Date | string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -4096,6 +4418,7 @@ export type TaskUpdateWithoutActivitiesInput = {
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4106,6 +4429,7 @@ export type TaskUpdateWithoutActivitiesInput = {
   parentTask?: Prisma.TaskUpdateOneWithoutSubtasksNestedInput
   subtasks?: Prisma.TaskUpdateManyWithoutParentTaskNestedInput
   milestone?: Prisma.MilestoneUpdateOneWithoutTasksNestedInput
+  issue?: Prisma.IssueUpdateOneWithoutTasksNestedInput
   release?: Prisma.ReleaseUpdateOneWithoutTasksNestedInput
   assignees?: Prisma.TaskAssigneeUpdateManyWithoutTaskNestedInput
   watchers?: Prisma.TaskWatcherUpdateManyWithoutTaskNestedInput
@@ -4135,12 +4459,14 @@ export type TaskUncheckedUpdateWithoutActivitiesInput = {
   reporterId?: Prisma.StringFieldUpdateOperationsInput | string
   parentTaskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   milestoneId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  issueId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   releaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4172,6 +4498,7 @@ export type TaskCreateWithoutNotificationsInput = {
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -4182,6 +4509,7 @@ export type TaskCreateWithoutNotificationsInput = {
   parentTask?: Prisma.TaskCreateNestedOneWithoutSubtasksInput
   subtasks?: Prisma.TaskCreateNestedManyWithoutParentTaskInput
   milestone?: Prisma.MilestoneCreateNestedOneWithoutTasksInput
+  issue?: Prisma.IssueCreateNestedOneWithoutTasksInput
   release?: Prisma.ReleaseCreateNestedOneWithoutTasksInput
   assignees?: Prisma.TaskAssigneeCreateNestedManyWithoutTaskInput
   watchers?: Prisma.TaskWatcherCreateNestedManyWithoutTaskInput
@@ -4211,12 +4539,14 @@ export type TaskUncheckedCreateWithoutNotificationsInput = {
   reporterId: string
   parentTaskId?: string | null
   milestoneId?: string | null
+  issueId?: string | null
   releaseId?: string | null
   startDate?: Date | string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -4264,6 +4594,7 @@ export type TaskUpdateWithoutNotificationsInput = {
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4274,6 +4605,7 @@ export type TaskUpdateWithoutNotificationsInput = {
   parentTask?: Prisma.TaskUpdateOneWithoutSubtasksNestedInput
   subtasks?: Prisma.TaskUpdateManyWithoutParentTaskNestedInput
   milestone?: Prisma.MilestoneUpdateOneWithoutTasksNestedInput
+  issue?: Prisma.IssueUpdateOneWithoutTasksNestedInput
   release?: Prisma.ReleaseUpdateOneWithoutTasksNestedInput
   assignees?: Prisma.TaskAssigneeUpdateManyWithoutTaskNestedInput
   watchers?: Prisma.TaskWatcherUpdateManyWithoutTaskNestedInput
@@ -4303,12 +4635,14 @@ export type TaskUncheckedUpdateWithoutNotificationsInput = {
   reporterId?: Prisma.StringFieldUpdateOperationsInput | string
   parentTaskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   milestoneId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  issueId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   releaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4340,6 +4674,7 @@ export type TaskCreateWithoutDailyPlanItemsInput = {
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -4350,6 +4685,7 @@ export type TaskCreateWithoutDailyPlanItemsInput = {
   parentTask?: Prisma.TaskCreateNestedOneWithoutSubtasksInput
   subtasks?: Prisma.TaskCreateNestedManyWithoutParentTaskInput
   milestone?: Prisma.MilestoneCreateNestedOneWithoutTasksInput
+  issue?: Prisma.IssueCreateNestedOneWithoutTasksInput
   release?: Prisma.ReleaseCreateNestedOneWithoutTasksInput
   assignees?: Prisma.TaskAssigneeCreateNestedManyWithoutTaskInput
   watchers?: Prisma.TaskWatcherCreateNestedManyWithoutTaskInput
@@ -4379,12 +4715,14 @@ export type TaskUncheckedCreateWithoutDailyPlanItemsInput = {
   reporterId: string
   parentTaskId?: string | null
   milestoneId?: string | null
+  issueId?: string | null
   releaseId?: string | null
   startDate?: Date | string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -4432,6 +4770,7 @@ export type TaskUpdateWithoutDailyPlanItemsInput = {
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4442,6 +4781,7 @@ export type TaskUpdateWithoutDailyPlanItemsInput = {
   parentTask?: Prisma.TaskUpdateOneWithoutSubtasksNestedInput
   subtasks?: Prisma.TaskUpdateManyWithoutParentTaskNestedInput
   milestone?: Prisma.MilestoneUpdateOneWithoutTasksNestedInput
+  issue?: Prisma.IssueUpdateOneWithoutTasksNestedInput
   release?: Prisma.ReleaseUpdateOneWithoutTasksNestedInput
   assignees?: Prisma.TaskAssigneeUpdateManyWithoutTaskNestedInput
   watchers?: Prisma.TaskWatcherUpdateManyWithoutTaskNestedInput
@@ -4471,12 +4811,14 @@ export type TaskUncheckedUpdateWithoutDailyPlanItemsInput = {
   reporterId?: Prisma.StringFieldUpdateOperationsInput | string
   parentTaskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   milestoneId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  issueId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   releaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4508,12 +4850,14 @@ export type TaskCreateManyReporterInput = {
   qaStatus?: $Enums.QaStatus
   parentTaskId?: string | null
   milestoneId?: string | null
+  issueId?: string | null
   releaseId?: string | null
   startDate?: Date | string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -4532,6 +4876,7 @@ export type TaskUpdateWithoutReporterInput = {
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4541,6 +4886,7 @@ export type TaskUpdateWithoutReporterInput = {
   parentTask?: Prisma.TaskUpdateOneWithoutSubtasksNestedInput
   subtasks?: Prisma.TaskUpdateManyWithoutParentTaskNestedInput
   milestone?: Prisma.MilestoneUpdateOneWithoutTasksNestedInput
+  issue?: Prisma.IssueUpdateOneWithoutTasksNestedInput
   release?: Prisma.ReleaseUpdateOneWithoutTasksNestedInput
   assignees?: Prisma.TaskAssigneeUpdateManyWithoutTaskNestedInput
   watchers?: Prisma.TaskWatcherUpdateManyWithoutTaskNestedInput
@@ -4570,12 +4916,14 @@ export type TaskUncheckedUpdateWithoutReporterInput = {
   qaStatus?: Prisma.EnumQaStatusFieldUpdateOperationsInput | $Enums.QaStatus
   parentTaskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   milestoneId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  issueId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   releaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4608,12 +4956,14 @@ export type TaskUncheckedUpdateManyWithoutReporterInput = {
   qaStatus?: Prisma.EnumQaStatusFieldUpdateOperationsInput | $Enums.QaStatus
   parentTaskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   milestoneId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  issueId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   releaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4632,12 +4982,14 @@ export type TaskCreateManyProjectInput = {
   reporterId: string
   parentTaskId?: string | null
   milestoneId?: string | null
+  issueId?: string | null
   releaseId?: string | null
   startDate?: Date | string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -4656,6 +5008,7 @@ export type TaskUpdateWithoutProjectInput = {
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4665,6 +5018,7 @@ export type TaskUpdateWithoutProjectInput = {
   parentTask?: Prisma.TaskUpdateOneWithoutSubtasksNestedInput
   subtasks?: Prisma.TaskUpdateManyWithoutParentTaskNestedInput
   milestone?: Prisma.MilestoneUpdateOneWithoutTasksNestedInput
+  issue?: Prisma.IssueUpdateOneWithoutTasksNestedInput
   release?: Prisma.ReleaseUpdateOneWithoutTasksNestedInput
   assignees?: Prisma.TaskAssigneeUpdateManyWithoutTaskNestedInput
   watchers?: Prisma.TaskWatcherUpdateManyWithoutTaskNestedInput
@@ -4694,12 +5048,14 @@ export type TaskUncheckedUpdateWithoutProjectInput = {
   reporterId?: Prisma.StringFieldUpdateOperationsInput | string
   parentTaskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   milestoneId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  issueId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   releaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4732,12 +5088,14 @@ export type TaskUncheckedUpdateManyWithoutProjectInput = {
   reporterId?: Prisma.StringFieldUpdateOperationsInput | string
   parentTaskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   milestoneId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  issueId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   releaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4756,12 +5114,14 @@ export type TaskCreateManyPhaseInput = {
   reporterId: string
   parentTaskId?: string | null
   milestoneId?: string | null
+  issueId?: string | null
   releaseId?: string | null
   startDate?: Date | string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -4780,6 +5140,7 @@ export type TaskUpdateWithoutPhaseInput = {
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4789,6 +5150,7 @@ export type TaskUpdateWithoutPhaseInput = {
   parentTask?: Prisma.TaskUpdateOneWithoutSubtasksNestedInput
   subtasks?: Prisma.TaskUpdateManyWithoutParentTaskNestedInput
   milestone?: Prisma.MilestoneUpdateOneWithoutTasksNestedInput
+  issue?: Prisma.IssueUpdateOneWithoutTasksNestedInput
   release?: Prisma.ReleaseUpdateOneWithoutTasksNestedInput
   assignees?: Prisma.TaskAssigneeUpdateManyWithoutTaskNestedInput
   watchers?: Prisma.TaskWatcherUpdateManyWithoutTaskNestedInput
@@ -4818,12 +5180,14 @@ export type TaskUncheckedUpdateWithoutPhaseInput = {
   reporterId?: Prisma.StringFieldUpdateOperationsInput | string
   parentTaskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   milestoneId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  issueId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   releaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4856,12 +5220,14 @@ export type TaskUncheckedUpdateManyWithoutPhaseInput = {
   reporterId?: Prisma.StringFieldUpdateOperationsInput | string
   parentTaskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   milestoneId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  issueId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   releaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4880,12 +5246,14 @@ export type TaskCreateManyStatusInput = {
   reporterId: string
   parentTaskId?: string | null
   milestoneId?: string | null
+  issueId?: string | null
   releaseId?: string | null
   startDate?: Date | string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -4904,6 +5272,7 @@ export type TaskUpdateWithoutStatusInput = {
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4913,6 +5282,7 @@ export type TaskUpdateWithoutStatusInput = {
   parentTask?: Prisma.TaskUpdateOneWithoutSubtasksNestedInput
   subtasks?: Prisma.TaskUpdateManyWithoutParentTaskNestedInput
   milestone?: Prisma.MilestoneUpdateOneWithoutTasksNestedInput
+  issue?: Prisma.IssueUpdateOneWithoutTasksNestedInput
   release?: Prisma.ReleaseUpdateOneWithoutTasksNestedInput
   assignees?: Prisma.TaskAssigneeUpdateManyWithoutTaskNestedInput
   watchers?: Prisma.TaskWatcherUpdateManyWithoutTaskNestedInput
@@ -4942,12 +5312,14 @@ export type TaskUncheckedUpdateWithoutStatusInput = {
   reporterId?: Prisma.StringFieldUpdateOperationsInput | string
   parentTaskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   milestoneId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  issueId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   releaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -4980,12 +5352,14 @@ export type TaskUncheckedUpdateManyWithoutStatusInput = {
   reporterId?: Prisma.StringFieldUpdateOperationsInput | string
   parentTaskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   milestoneId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  issueId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   releaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -5004,12 +5378,14 @@ export type TaskCreateManyMilestoneInput = {
   qaStatus?: $Enums.QaStatus
   reporterId: string
   parentTaskId?: string | null
+  issueId?: string | null
   releaseId?: string | null
   startDate?: Date | string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -5028,6 +5404,7 @@ export type TaskUpdateWithoutMilestoneInput = {
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -5037,6 +5414,7 @@ export type TaskUpdateWithoutMilestoneInput = {
   reporter?: Prisma.UserUpdateOneRequiredWithoutReportedTasksNestedInput
   parentTask?: Prisma.TaskUpdateOneWithoutSubtasksNestedInput
   subtasks?: Prisma.TaskUpdateManyWithoutParentTaskNestedInput
+  issue?: Prisma.IssueUpdateOneWithoutTasksNestedInput
   release?: Prisma.ReleaseUpdateOneWithoutTasksNestedInput
   assignees?: Prisma.TaskAssigneeUpdateManyWithoutTaskNestedInput
   watchers?: Prisma.TaskWatcherUpdateManyWithoutTaskNestedInput
@@ -5066,12 +5444,14 @@ export type TaskUncheckedUpdateWithoutMilestoneInput = {
   qaStatus?: Prisma.EnumQaStatusFieldUpdateOperationsInput | $Enums.QaStatus
   reporterId?: Prisma.StringFieldUpdateOperationsInput | string
   parentTaskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  issueId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   releaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -5104,12 +5484,14 @@ export type TaskUncheckedUpdateManyWithoutMilestoneInput = {
   qaStatus?: Prisma.EnumQaStatusFieldUpdateOperationsInput | $Enums.QaStatus
   reporterId?: Prisma.StringFieldUpdateOperationsInput | string
   parentTaskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  issueId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   releaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -5128,12 +5510,14 @@ export type TaskCreateManyParentTaskInput = {
   qaStatus?: $Enums.QaStatus
   reporterId: string
   milestoneId?: string | null
+  issueId?: string | null
   releaseId?: string | null
   startDate?: Date | string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -5152,6 +5536,7 @@ export type TaskUpdateWithoutParentTaskInput = {
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -5161,6 +5546,7 @@ export type TaskUpdateWithoutParentTaskInput = {
   reporter?: Prisma.UserUpdateOneRequiredWithoutReportedTasksNestedInput
   subtasks?: Prisma.TaskUpdateManyWithoutParentTaskNestedInput
   milestone?: Prisma.MilestoneUpdateOneWithoutTasksNestedInput
+  issue?: Prisma.IssueUpdateOneWithoutTasksNestedInput
   release?: Prisma.ReleaseUpdateOneWithoutTasksNestedInput
   assignees?: Prisma.TaskAssigneeUpdateManyWithoutTaskNestedInput
   watchers?: Prisma.TaskWatcherUpdateManyWithoutTaskNestedInput
@@ -5190,12 +5576,14 @@ export type TaskUncheckedUpdateWithoutParentTaskInput = {
   qaStatus?: Prisma.EnumQaStatusFieldUpdateOperationsInput | $Enums.QaStatus
   reporterId?: Prisma.StringFieldUpdateOperationsInput | string
   milestoneId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  issueId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   releaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -5228,12 +5616,146 @@ export type TaskUncheckedUpdateManyWithoutParentTaskInput = {
   qaStatus?: Prisma.EnumQaStatusFieldUpdateOperationsInput | $Enums.QaStatus
   reporterId?: Prisma.StringFieldUpdateOperationsInput | string
   milestoneId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  issueId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   releaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
+  position?: Prisma.FloatFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type TaskCreateManyIssueInput = {
+  id?: string
+  key: string
+  projectId: string
+  title: string
+  description?: string | null
+  type?: $Enums.TaskType
+  priority?: $Enums.Priority
+  statusId: string
+  phaseId?: string | null
+  qaStatus?: $Enums.QaStatus
+  reporterId: string
+  parentTaskId?: string | null
+  milestoneId?: string | null
+  releaseId?: string | null
+  startDate?: Date | string | null
+  dueDate?: Date | string | null
+  completedAt?: Date | string | null
+  estimateHours?: number | null
+  spentHours?: number | null
+  progress?: number
+  position?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type TaskUpdateWithoutIssueInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  key?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  type?: Prisma.EnumTaskTypeFieldUpdateOperationsInput | $Enums.TaskType
+  priority?: Prisma.EnumPriorityFieldUpdateOperationsInput | $Enums.Priority
+  qaStatus?: Prisma.EnumQaStatusFieldUpdateOperationsInput | $Enums.QaStatus
+  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
+  position?: Prisma.FloatFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  project?: Prisma.ProjectUpdateOneRequiredWithoutTasksNestedInput
+  status?: Prisma.TaskStatusUpdateOneRequiredWithoutTasksNestedInput
+  phase?: Prisma.ProjectPhaseUpdateOneWithoutTasksNestedInput
+  reporter?: Prisma.UserUpdateOneRequiredWithoutReportedTasksNestedInput
+  parentTask?: Prisma.TaskUpdateOneWithoutSubtasksNestedInput
+  subtasks?: Prisma.TaskUpdateManyWithoutParentTaskNestedInput
+  milestone?: Prisma.MilestoneUpdateOneWithoutTasksNestedInput
+  release?: Prisma.ReleaseUpdateOneWithoutTasksNestedInput
+  assignees?: Prisma.TaskAssigneeUpdateManyWithoutTaskNestedInput
+  watchers?: Prisma.TaskWatcherUpdateManyWithoutTaskNestedInput
+  labels?: Prisma.TaskLabelUpdateManyWithoutTaskNestedInput
+  checklist?: Prisma.ChecklistItemUpdateManyWithoutTaskNestedInput
+  linksFrom?: Prisma.TaskLinkUpdateManyWithoutSourceNestedInput
+  linksTo?: Prisma.TaskLinkUpdateManyWithoutTargetNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutTaskNestedInput
+  attachments?: Prisma.AttachmentUpdateManyWithoutTaskNestedInput
+  activities?: Prisma.ActivityLogUpdateManyWithoutTaskNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutTaskNestedInput
+  issues?: Prisma.IssueUpdateManyWithoutTaskNestedInput
+  hotfixes?: Prisma.HotfixUpdateManyWithoutTaskNestedInput
+  dailyPlanItems?: Prisma.DailyPlanItemUpdateManyWithoutTaskNestedInput
+}
+
+export type TaskUncheckedUpdateWithoutIssueInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  key?: Prisma.StringFieldUpdateOperationsInput | string
+  projectId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  type?: Prisma.EnumTaskTypeFieldUpdateOperationsInput | $Enums.TaskType
+  priority?: Prisma.EnumPriorityFieldUpdateOperationsInput | $Enums.Priority
+  statusId?: Prisma.StringFieldUpdateOperationsInput | string
+  phaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  qaStatus?: Prisma.EnumQaStatusFieldUpdateOperationsInput | $Enums.QaStatus
+  reporterId?: Prisma.StringFieldUpdateOperationsInput | string
+  parentTaskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  milestoneId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  releaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
+  position?: Prisma.FloatFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  subtasks?: Prisma.TaskUncheckedUpdateManyWithoutParentTaskNestedInput
+  assignees?: Prisma.TaskAssigneeUncheckedUpdateManyWithoutTaskNestedInput
+  watchers?: Prisma.TaskWatcherUncheckedUpdateManyWithoutTaskNestedInput
+  labels?: Prisma.TaskLabelUncheckedUpdateManyWithoutTaskNestedInput
+  checklist?: Prisma.ChecklistItemUncheckedUpdateManyWithoutTaskNestedInput
+  linksFrom?: Prisma.TaskLinkUncheckedUpdateManyWithoutSourceNestedInput
+  linksTo?: Prisma.TaskLinkUncheckedUpdateManyWithoutTargetNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutTaskNestedInput
+  attachments?: Prisma.AttachmentUncheckedUpdateManyWithoutTaskNestedInput
+  activities?: Prisma.ActivityLogUncheckedUpdateManyWithoutTaskNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutTaskNestedInput
+  issues?: Prisma.IssueUncheckedUpdateManyWithoutTaskNestedInput
+  hotfixes?: Prisma.HotfixUncheckedUpdateManyWithoutTaskNestedInput
+  dailyPlanItems?: Prisma.DailyPlanItemUncheckedUpdateManyWithoutTaskNestedInput
+}
+
+export type TaskUncheckedUpdateManyWithoutIssueInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  key?: Prisma.StringFieldUpdateOperationsInput | string
+  projectId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  type?: Prisma.EnumTaskTypeFieldUpdateOperationsInput | $Enums.TaskType
+  priority?: Prisma.EnumPriorityFieldUpdateOperationsInput | $Enums.Priority
+  statusId?: Prisma.StringFieldUpdateOperationsInput | string
+  phaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  qaStatus?: Prisma.EnumQaStatusFieldUpdateOperationsInput | $Enums.QaStatus
+  reporterId?: Prisma.StringFieldUpdateOperationsInput | string
+  parentTaskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  milestoneId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  releaseId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -5253,11 +5775,13 @@ export type TaskCreateManyReleaseInput = {
   reporterId: string
   parentTaskId?: string | null
   milestoneId?: string | null
+  issueId?: string | null
   startDate?: Date | string | null
   dueDate?: Date | string | null
   completedAt?: Date | string | null
   estimateHours?: number | null
   spentHours?: number | null
+  progress?: number
   position?: number
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -5276,6 +5800,7 @@ export type TaskUpdateWithoutReleaseInput = {
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -5286,6 +5811,7 @@ export type TaskUpdateWithoutReleaseInput = {
   parentTask?: Prisma.TaskUpdateOneWithoutSubtasksNestedInput
   subtasks?: Prisma.TaskUpdateManyWithoutParentTaskNestedInput
   milestone?: Prisma.MilestoneUpdateOneWithoutTasksNestedInput
+  issue?: Prisma.IssueUpdateOneWithoutTasksNestedInput
   assignees?: Prisma.TaskAssigneeUpdateManyWithoutTaskNestedInput
   watchers?: Prisma.TaskWatcherUpdateManyWithoutTaskNestedInput
   labels?: Prisma.TaskLabelUpdateManyWithoutTaskNestedInput
@@ -5315,11 +5841,13 @@ export type TaskUncheckedUpdateWithoutReleaseInput = {
   reporterId?: Prisma.StringFieldUpdateOperationsInput | string
   parentTaskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   milestoneId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  issueId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -5353,11 +5881,13 @@ export type TaskUncheckedUpdateManyWithoutReleaseInput = {
   reporterId?: Prisma.StringFieldUpdateOperationsInput | string
   parentTaskId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   milestoneId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  issueId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   estimateHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   spentHours?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  progress?: Prisma.IntFieldUpdateOperationsInput | number
   position?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -5525,12 +6055,14 @@ export type TaskSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   reporterId?: boolean
   parentTaskId?: boolean
   milestoneId?: boolean
+  issueId?: boolean
   releaseId?: boolean
   startDate?: boolean
   dueDate?: boolean
   completedAt?: boolean
   estimateHours?: boolean
   spentHours?: boolean
+  progress?: boolean
   position?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -5541,6 +6073,7 @@ export type TaskSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   parentTask?: boolean | Prisma.Task$parentTaskArgs<ExtArgs>
   subtasks?: boolean | Prisma.Task$subtasksArgs<ExtArgs>
   milestone?: boolean | Prisma.Task$milestoneArgs<ExtArgs>
+  issue?: boolean | Prisma.Task$issueArgs<ExtArgs>
   release?: boolean | Prisma.Task$releaseArgs<ExtArgs>
   assignees?: boolean | Prisma.Task$assigneesArgs<ExtArgs>
   watchers?: boolean | Prisma.Task$watchersArgs<ExtArgs>
@@ -5572,12 +6105,14 @@ export type TaskSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   reporterId?: boolean
   parentTaskId?: boolean
   milestoneId?: boolean
+  issueId?: boolean
   releaseId?: boolean
   startDate?: boolean
   dueDate?: boolean
   completedAt?: boolean
   estimateHours?: boolean
   spentHours?: boolean
+  progress?: boolean
   position?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -5587,6 +6122,7 @@ export type TaskSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   reporter?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   parentTask?: boolean | Prisma.Task$parentTaskArgs<ExtArgs>
   milestone?: boolean | Prisma.Task$milestoneArgs<ExtArgs>
+  issue?: boolean | Prisma.Task$issueArgs<ExtArgs>
   release?: boolean | Prisma.Task$releaseArgs<ExtArgs>
 }, ExtArgs["result"]["task"]>
 
@@ -5604,12 +6140,14 @@ export type TaskSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   reporterId?: boolean
   parentTaskId?: boolean
   milestoneId?: boolean
+  issueId?: boolean
   releaseId?: boolean
   startDate?: boolean
   dueDate?: boolean
   completedAt?: boolean
   estimateHours?: boolean
   spentHours?: boolean
+  progress?: boolean
   position?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -5619,6 +6157,7 @@ export type TaskSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   reporter?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   parentTask?: boolean | Prisma.Task$parentTaskArgs<ExtArgs>
   milestone?: boolean | Prisma.Task$milestoneArgs<ExtArgs>
+  issue?: boolean | Prisma.Task$issueArgs<ExtArgs>
   release?: boolean | Prisma.Task$releaseArgs<ExtArgs>
 }, ExtArgs["result"]["task"]>
 
@@ -5636,18 +6175,20 @@ export type TaskSelectScalar = {
   reporterId?: boolean
   parentTaskId?: boolean
   milestoneId?: boolean
+  issueId?: boolean
   releaseId?: boolean
   startDate?: boolean
   dueDate?: boolean
   completedAt?: boolean
   estimateHours?: boolean
   spentHours?: boolean
+  progress?: boolean
   position?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type TaskOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "key" | "projectId" | "title" | "description" | "type" | "priority" | "statusId" | "phaseId" | "qaStatus" | "reporterId" | "parentTaskId" | "milestoneId" | "releaseId" | "startDate" | "dueDate" | "completedAt" | "estimateHours" | "spentHours" | "position" | "createdAt" | "updatedAt", ExtArgs["result"]["task"]>
+export type TaskOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "key" | "projectId" | "title" | "description" | "type" | "priority" | "statusId" | "phaseId" | "qaStatus" | "reporterId" | "parentTaskId" | "milestoneId" | "issueId" | "releaseId" | "startDate" | "dueDate" | "completedAt" | "estimateHours" | "spentHours" | "progress" | "position" | "createdAt" | "updatedAt", ExtArgs["result"]["task"]>
 export type TaskInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   project?: boolean | Prisma.ProjectDefaultArgs<ExtArgs>
   status?: boolean | Prisma.TaskStatusDefaultArgs<ExtArgs>
@@ -5656,6 +6197,7 @@ export type TaskInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   parentTask?: boolean | Prisma.Task$parentTaskArgs<ExtArgs>
   subtasks?: boolean | Prisma.Task$subtasksArgs<ExtArgs>
   milestone?: boolean | Prisma.Task$milestoneArgs<ExtArgs>
+  issue?: boolean | Prisma.Task$issueArgs<ExtArgs>
   release?: boolean | Prisma.Task$releaseArgs<ExtArgs>
   assignees?: boolean | Prisma.Task$assigneesArgs<ExtArgs>
   watchers?: boolean | Prisma.Task$watchersArgs<ExtArgs>
@@ -5679,6 +6221,7 @@ export type TaskIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   reporter?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   parentTask?: boolean | Prisma.Task$parentTaskArgs<ExtArgs>
   milestone?: boolean | Prisma.Task$milestoneArgs<ExtArgs>
+  issue?: boolean | Prisma.Task$issueArgs<ExtArgs>
   release?: boolean | Prisma.Task$releaseArgs<ExtArgs>
 }
 export type TaskIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -5688,6 +6231,7 @@ export type TaskIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   reporter?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   parentTask?: boolean | Prisma.Task$parentTaskArgs<ExtArgs>
   milestone?: boolean | Prisma.Task$milestoneArgs<ExtArgs>
+  issue?: boolean | Prisma.Task$issueArgs<ExtArgs>
   release?: boolean | Prisma.Task$releaseArgs<ExtArgs>
 }
 
@@ -5701,6 +6245,7 @@ export type $TaskPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     parentTask: Prisma.$TaskPayload<ExtArgs> | null
     subtasks: Prisma.$TaskPayload<ExtArgs>[]
     milestone: Prisma.$MilestonePayload<ExtArgs> | null
+    issue: Prisma.$IssuePayload<ExtArgs> | null
     release: Prisma.$ReleasePayload<ExtArgs> | null
     assignees: Prisma.$TaskAssigneePayload<ExtArgs>[]
     watchers: Prisma.$TaskWatcherPayload<ExtArgs>[]
@@ -5712,6 +6257,9 @@ export type $TaskPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     attachments: Prisma.$AttachmentPayload<ExtArgs>[]
     activities: Prisma.$ActivityLogPayload<ExtArgs>[]
     notifications: Prisma.$NotificationPayload<ExtArgs>[]
+    /**
+     * Issues that nominate this task as their primary fix.
+     */
     issues: Prisma.$IssuePayload<ExtArgs>[]
     hotfixes: Prisma.$HotfixPayload<ExtArgs>[]
     dailyPlanItems: Prisma.$DailyPlanItemPayload<ExtArgs>[]
@@ -5739,12 +6287,20 @@ export type $TaskPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     reporterId: string
     parentTaskId: string | null
     milestoneId: string | null
+    /**
+     * The issue this task works towards. One issue can have many tasks.
+     */
+    issueId: string | null
     releaseId: string | null
     startDate: Date | null
     dueDate: Date | null
     completedAt: Date | null
     estimateHours: number | null
     spentHours: number | null
+    /**
+     * Self-reported completion, 0-100. Forced to 100 by a DONE status.
+     */
+    progress: number
     /**
      * Board ordering within a status column.
      */
@@ -6152,6 +6708,7 @@ export interface Prisma__TaskClient<T, Null = never, ExtArgs extends runtime.Typ
   parentTask<T extends Prisma.Task$parentTaskArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Task$parentTaskArgs<ExtArgs>>): Prisma.Prisma__TaskClient<runtime.Types.Result.GetResult<Prisma.$TaskPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   subtasks<T extends Prisma.Task$subtasksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Task$subtasksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TaskPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   milestone<T extends Prisma.Task$milestoneArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Task$milestoneArgs<ExtArgs>>): Prisma.Prisma__MilestoneClient<runtime.Types.Result.GetResult<Prisma.$MilestonePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  issue<T extends Prisma.Task$issueArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Task$issueArgs<ExtArgs>>): Prisma.Prisma__IssueClient<runtime.Types.Result.GetResult<Prisma.$IssuePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   release<T extends Prisma.Task$releaseArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Task$releaseArgs<ExtArgs>>): Prisma.Prisma__ReleaseClient<runtime.Types.Result.GetResult<Prisma.$ReleasePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   assignees<T extends Prisma.Task$assigneesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Task$assigneesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TaskAssigneePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   watchers<T extends Prisma.Task$watchersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Task$watchersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TaskWatcherPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -6208,12 +6765,14 @@ export interface TaskFieldRefs {
   readonly reporterId: Prisma.FieldRef<"Task", 'String'>
   readonly parentTaskId: Prisma.FieldRef<"Task", 'String'>
   readonly milestoneId: Prisma.FieldRef<"Task", 'String'>
+  readonly issueId: Prisma.FieldRef<"Task", 'String'>
   readonly releaseId: Prisma.FieldRef<"Task", 'String'>
   readonly startDate: Prisma.FieldRef<"Task", 'DateTime'>
   readonly dueDate: Prisma.FieldRef<"Task", 'DateTime'>
   readonly completedAt: Prisma.FieldRef<"Task", 'DateTime'>
   readonly estimateHours: Prisma.FieldRef<"Task", 'Float'>
   readonly spentHours: Prisma.FieldRef<"Task", 'Float'>
+  readonly progress: Prisma.FieldRef<"Task", 'Int'>
   readonly position: Prisma.FieldRef<"Task", 'Float'>
   readonly createdAt: Prisma.FieldRef<"Task", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Task", 'DateTime'>
@@ -6696,6 +7255,25 @@ export type Task$milestoneArgs<ExtArgs extends runtime.Types.Extensions.Internal
    */
   include?: Prisma.MilestoneInclude<ExtArgs> | null
   where?: Prisma.MilestoneWhereInput
+}
+
+/**
+ * Task.issue
+ */
+export type Task$issueArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Issue
+   */
+  select?: Prisma.IssueSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Issue
+   */
+  omit?: Prisma.IssueOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.IssueInclude<ExtArgs> | null
+  where?: Prisma.IssueWhereInput
 }
 
 /**

@@ -22,13 +22,15 @@
     "db:seed": "tsx --env-file=.env prisma/seed.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
-    "test": "npm run test:api && npm run test:standup && npm run test:telegram && npm run test:jobs && npm run test:portfolio",
+    "test": "npm run test:workflow && npm run test:api && npm run test:standup && npm run test:telegram && npm run test:jobs && npm run test:portfolio",
     "test:api": "node --env-file=.env --test tests/api.test.mjs",
     "test:standup": "tsx --env-file=.env --test tests/standup.test.mjs",
     "test:telegram": "tsx --env-file=.env --test tests/telegram.test.mjs",
     "test:jobs": "tsx --env-file=.env --test tests/jobs.test.mjs",
     "db:seed:team": "tsx --env-file=.env prisma/seed-team.ts",
-    "test:portfolio": "tsx --test tests/portfolio.test.mjs"
+    "test:portfolio": "tsx --test tests/portfolio.test.mjs",
+    "test:workflow": "tsx --test tests/issueWorkflow.test.mjs",
+    "test:fixes": "tsx --env-file=.env --test tests/verify-fixes.test.mjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",

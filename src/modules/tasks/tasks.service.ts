@@ -15,6 +15,7 @@ export const taskListSelect = {
   completedAt: true,
   estimateHours: true,
   spentHours: true,
+  progress: true,
   position: true,
   createdAt: true,
   updatedAt: true,
@@ -27,6 +28,8 @@ export const taskListSelect = {
   reporter: { select: userSummary },
   assignees: { select: { user: { select: userSummary } } },
   labels: { select: { label: { select: labelSummary } } },
+  /// The issue this task works towards, if it came from one.
+  issue: { select: { id: true, key: true, title: true, status: true, severity: true } },
   _count: { select: { subtasks: true, comments: true, attachments: true, checklist: true } },
 } as const;
 
@@ -326,3 +329,27 @@ export const taskAudience = async (taskId: string): Promise<string[]> => {
 
 export const taskUrl = (projectKey: string, taskKey: string) =>
   `/projects/${projectKey}/tasks/${taskKey}`;
+
+/**
+ * Keeps the completion percentage honest against the status column.
+ *
+ * A task sitting in Done at 40% and one sitting in Backlog at 100% are both
+ * lies, and both used to be reachable — the board and the percentage were
+ * edited from different screens. Returns the percentage to store, or
+ * `undefined` when the caller's value already agrees with the status.
+ *
+ * `requested` is the percentage the caller asked for, if any.
+ */
+export const progressForStatus = (
+  category: string,
+  requested: number | undefined,
+  current: number,
+): number | undefined => {
+  if (category === 'DONE') return 100;
+  if (category === 'CANCELED') return requested ?? undefined;
+
+  // Leaving Done: 100% would claim the work is finished when the board says it
+  // is not, so step it back just below the line.
+  if (requested === undefined) return current === 100 ? 90 : undefined;
+  return Math.min(requested, 99);
+};

@@ -9,6 +9,11 @@ import { changedFieldNames, shortDescription } from '../../services/notification
 import { notify } from '../../services/notifications.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import type { LinkType } from '../../generated/prisma/enums.js';
+import {
+  advanceIssueFromTasks,
+  assertTaskStatusAllowedByIssue,
+  assertTasksStatusAllowedByIssue,
+} from '../issues/issueTaskSync.js';
 import * as svc from './tasks.service.js';
 
 type ListQuery = {
@@ -28,6 +33,7 @@ type ListQuery = {
   milestoneId?: string;
   releaseId?: string;
   parentTaskId?: string;
+  issueId?: string;
   topLevelOnly: boolean;
   unassigned?: boolean;
   overdue?: boolean;
@@ -35,12 +41,21 @@ type ListQuery = {
   dueTo?: Date | null;
   dueWithinDays?: number;
   includeDone: boolean;
-  sort: 'position' | 'dueDate' | 'priority' | 'createdAt' | 'updatedAt' | 'title' | 'key';
+  sort: 'position' | 'dueDate' | 'priority' | 'progress' | 'createdAt' | 'updatedAt' | 'title' | 'key';
   order: 'asc' | 'desc';
   groupBy: 'none' | 'status' | 'assignee' | 'priority' | 'phase' | 'milestone';
 };
 
 const PRIORITY_ORDER: Record<string, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+
+/** A deadline before the start date is a typo, not a plan. */
+const assertDateOrder = (startDate?: Date | null, dueDate?: Date | null) => {
+  if (startDate && dueDate && startDate.getTime() > dueDate.getTime()) {
+    throw badRequest('The deadline cannot be earlier than the start date', {
+      fieldErrors: { dueDate: 'Must be on or after the start date' },
+    });
+  }
+};
 
 const buildWhere = async (req: Request, query: ListQuery): Promise<Prisma.TaskWhereInput> => {
   const auth = getAuth(req);
@@ -62,6 +77,7 @@ const buildWhere = async (req: Request, query: ListQuery): Promise<Prisma.TaskWh
     projectId: { in: projectIds },
     ...(query.topLevelOnly ? { parentTaskId: null } : {}),
     ...(query.parentTaskId ? { parentTaskId: query.parentTaskId } : {}),
+    ...(query.issueId ? { issueId: query.issueId } : {}),
     ...(query.statusId ? { statusId: { in: query.statusId } } : {}),
     ...(query.statusCategory
       ? { status: { category: { in: query.statusCategory as 'TODO'[] } } }
@@ -119,6 +135,8 @@ const orderBy = (query: ListQuery): Prisma.TaskOrderByWithRelationInput[] => {
       return [{ dueDate: { sort: query.order, nulls: 'last' } }, { priority: 'desc' }];
     case 'priority':
       return [{ priority: query.order === 'asc' ? 'desc' : 'asc' }, { dueDate: 'asc' }];
+    case 'progress':
+      return [{ progress: query.order }, { dueDate: 'asc' }];
     case 'createdAt':
       return [{ createdAt: query.order }];
     case 'updatedAt':
@@ -266,6 +284,8 @@ export const createTask = async (req: Request, res: Response) => {
     startDate?: Date | null;
     dueDate?: Date | null;
     estimateHours?: number | null;
+    progress?: number;
+    issueId?: string | null;
     checklist?: string[];
   };
 
@@ -279,8 +299,19 @@ export const createTask = async (req: Request, res: Response) => {
   if (body.dueDate && !access.permissions.has('task:manage_deadline') && !auth.isSuperAdmin) {
     throw forbidden('You cannot set deadlines on this project');
   }
+  assertDateOrder(body.startDate, body.dueDate);
 
   await svc.assertProjectScope(projectId, body);
+
+  if (body.issueId) {
+    const issue = await prisma.issue.findUnique({
+      where: { id: body.issueId },
+      select: { projectId: true },
+    });
+    if (issue?.projectId !== projectId) {
+      throw badRequest('That issue is not part of this project');
+    }
+  }
 
   const statusId =
     body.statusId ??
@@ -320,6 +351,8 @@ export const createTask = async (req: Request, res: Response) => {
         ...(body.startDate !== undefined ? { startDate: body.startDate } : {}),
         ...(body.dueDate !== undefined ? { dueDate: body.dueDate } : {}),
         ...(body.estimateHours !== undefined ? { estimateHours: body.estimateHours } : {}),
+        ...(body.progress !== undefined ? { progress: body.progress } : {}),
+        issueId: body.issueId ?? null,
         position,
         ...(body.assigneeIds?.length
           ? { assignees: { create: body.assigneeIds.map((userId) => ({ userId })) } }
@@ -401,6 +434,8 @@ export const updateTask = async (req: Request, res: Response) => {
       dueDate: true,
       estimateHours: true,
       spentHours: true,
+      progress: true,
+      issueId: true,
       status: { select: { name: true, category: true } },
       assignees: { select: { userId: true } },
     },
@@ -415,22 +450,51 @@ export const updateTask = async (req: Request, res: Response) => {
     (body.dueDate !== undefined && String(body.dueDate) !== String(before.dueDate)) ||
     (body.startDate !== undefined && String(body.startDate) !== String(before.startDate));
   const touchesAssignees = body.assigneeIds !== undefined;
+  const touchesProgress = body.progress !== undefined && body.progress !== before.progress;
   const touchesOther = Object.keys(body).some(
-    (k) => !['statusId', 'phaseId', 'qaStatus', 'dueDate', 'startDate', 'assigneeIds'].includes(k),
+    (k) =>
+      ![
+        'statusId',
+        'phaseId',
+        'qaStatus',
+        'dueDate',
+        'startDate',
+        'assigneeIds',
+        'progress',
+      ].includes(k),
   );
+
+  // Whoever is doing the work reports how far along it is. Requiring
+  // `task:update` for that would mean a developer could move the card but not
+  // say it is 60% done, which is the one number their lead actually reads.
+  const isAssignee = before.assignees.some((assignee) => assignee.userId === auth.id);
 
   if (touchesStatus && !can('task:change_status')) throw forbidden('You cannot change task status');
   if (touchesPhase && !can('task:manage_phase')) throw forbidden('You cannot change the phase');
   if (touchesQa && !can('task:manage_qa')) throw forbidden('You cannot change the testing status');
   if (touchesDates && !can('task:manage_deadline')) throw forbidden('You cannot change deadlines');
   if (touchesOther && !can('task:update')) throw forbidden('You cannot edit this task');
+  if (touchesProgress && !can('task:update') && !isAssignee) {
+    throw forbidden('Only the people working on this task can update its progress');
+  }
   if (touchesAssignees) {
     const next = body.assigneeIds as string[];
     const onlySelf =
       next.length <= 1 && next.every((id) => id === auth.id) &&
       before.assignees.every((a) => a.userId === auth.id);
-    if (!can('task:assign') && !onlySelf) throw forbidden('You cannot assign this task');
+    // Pulling somebody in to help is open to whoever is already on the task;
+    // dropping a colleague off it is not.
+    const addsOnly =
+      isAssignee && before.assignees.every((assignee) => next.includes(assignee.userId));
+    if (!can('task:assign') && !onlySelf && !addsOnly) {
+      throw forbidden('You can add people to help, but only a lead can take someone off this task');
+    }
   }
+
+  assertDateOrder(
+    (body.startDate as Date | null | undefined) ?? before.startDate,
+    (body.dueDate as Date | null | undefined) ?? before.dueDate,
+  );
 
   await svc.assertProjectScope(ref.projectId, {
     statusId: body.statusId as string | undefined,
@@ -452,12 +516,33 @@ export const updateTask = async (req: Request, res: Response) => {
   } & Record<string, unknown>;
 
   let completedAt: Date | null | undefined;
+  let progress: number | undefined;
   if (touchesStatus) {
     const nextStatus = await prisma.taskStatus.findUniqueOrThrow({
       where: { id: String(body.statusId) },
       select: { category: true, name: true },
     });
+    // A task that fixes an issue cannot be restarted while that issue is
+    // settled — the issue has to be reopened first.
+    await assertTaskStatusAllowedByIssue(ref.id, nextStatus.category);
     completedAt = nextStatus.category === 'DONE' ? new Date() : null;
+    progress = svc.progressForStatus(
+      nextStatus.category,
+      body.progress as number | undefined,
+      before.progress,
+    );
+  } else if (touchesProgress) {
+    // No status change, so reconcile against the column the task is already in
+    // — otherwise a progress-only PATCH could set 100% on a task in Backlog.
+    const current = await prisma.taskStatus.findUniqueOrThrow({
+      where: { id: before.statusId },
+      select: { category: true },
+    });
+    progress = svc.progressForStatus(
+      current.category,
+      body.progress as number,
+      before.progress,
+    );
   }
 
   const task = await prisma.$transaction(async (tx) => {
@@ -483,10 +568,21 @@ export const updateTask = async (req: Request, res: Response) => {
     }
     return tx.task.update({
       where: { id: ref.id },
-      data: { ...scalars, ...(completedAt !== undefined ? { completedAt } : {}) },
+      data: {
+        ...scalars,
+        ...(completedAt !== undefined ? { completedAt } : {}),
+        ...(progress !== undefined ? { progress } : {}),
+      },
       select: svc.taskDetailSelect,
     });
   });
+
+  // The issue follows its tasks: the first one to start moves it to In
+  // Progress, the last one to finish moves it to Ready for Testing.
+  const issueMoved =
+    touchesStatus && before.issueId
+      ? await advanceIssueFromTasks(ref.id, { id: auth.id, name: auth.user.name })
+      : null;
 
   const changes = diffFields(before as Record<string, unknown>, scalars, [
     'title',
@@ -502,6 +598,8 @@ export const updateTask = async (req: Request, res: Response) => {
     'dueDate',
     'estimateHours',
     'spentHours',
+    'progress',
+    'issueId',
   ]);
 
   const audience = await svc.taskAudience(ref.id);
@@ -618,7 +716,7 @@ export const updateTask = async (req: Request, res: Response) => {
     }
   }
 
-  res.json({ data: svc.shapeTask(task) });
+  res.json({ data: svc.shapeTask(task), ...(issueMoved ? { issue: issueMoved } : {}) });
 };
 
 export const moveTask = async (req: Request, res: Response) => {
@@ -631,7 +729,14 @@ export const moveTask = async (req: Request, res: Response) => {
 
   const before = await prisma.task.findUniqueOrThrow({
     where: { id: ref.id },
-    select: { statusId: true, title: true, key: true, status: { select: { name: true } } },
+    select: {
+      statusId: true,
+      title: true,
+      key: true,
+      progress: true,
+      issueId: true,
+      status: { select: { name: true } },
+    },
   });
 
   const position = await svc.positionAfter(ref.projectId, body.statusId, body.afterTaskId);
@@ -640,12 +745,20 @@ export const moveTask = async (req: Request, res: Response) => {
     select: { category: true, name: true },
   });
 
+  // Dragging a card is the most common way a status changes, so the issue gate
+  // has to live here too — not just on the detail form.
+  if (before.statusId !== body.statusId) {
+    await assertTaskStatusAllowedByIssue(ref.id, nextStatus.category);
+  }
+  const progress = svc.progressForStatus(nextStatus.category, undefined, before.progress);
+
   const task = await prisma.task.update({
     where: { id: ref.id },
     data: {
       statusId: body.statusId,
       position,
       completedAt: nextStatus.category === 'DONE' ? new Date() : null,
+      ...(progress !== undefined ? { progress } : {}),
     },
     select: svc.taskListSelect,
   });
@@ -673,7 +786,12 @@ export const moveTask = async (req: Request, res: Response) => {
     });
   }
 
-  res.json({ data: svc.shapeTask(task) });
+  const issueMoved =
+    before.statusId !== body.statusId && before.issueId
+      ? await advanceIssueFromTasks(ref.id, { id: auth.id, name: auth.user.name })
+      : null;
+
+  res.json({ data: svc.shapeTask(task), ...(issueMoved ? { issue: issueMoved } : {}) });
 };
 
 export const deleteTask = async (req: Request, res: Response) => {
@@ -729,7 +847,9 @@ export const bulkUpdate = async (req: Request, res: Response) => {
     qaStatus?: 'PENDING';
     milestoneId?: string | null;
     releaseId?: string | null;
+    startDate?: Date | null;
     dueDate?: Date | null;
+    progress?: number;
     addAssigneeIds?: string[];
     removeAssigneeIds?: string[];
     addLabelIds?: string[];
@@ -744,6 +864,10 @@ export const bulkUpdate = async (req: Request, res: Response) => {
       key: true,
       title: true,
       description: true,
+      progress: true,
+      issueId: true,
+      startDate: true,
+      dueDate: true,
       project: { select: { key: true } },
       assignees: { select: { userId: true } },
     },
@@ -763,9 +887,27 @@ export const bulkUpdate = async (req: Request, res: Response) => {
     ) {
       throw forbidden('You cannot assign tasks on one of these projects');
     }
-    if (body.dueDate !== undefined && !auth.isSuperAdmin && !access.permissions.has('task:manage_deadline')) {
+    if (
+      (body.dueDate !== undefined || body.startDate !== undefined) &&
+      !auth.isSuperAdmin &&
+      !access.permissions.has('task:manage_deadline')
+    ) {
       throw forbidden('You cannot change deadlines on one of these projects');
     }
+    if (
+      body.progress !== undefined &&
+      !auth.isSuperAdmin &&
+      !access.permissions.has('task:update')
+    ) {
+      throw forbidden('You cannot update progress on one of these projects');
+    }
+  }
+
+  for (const task of tasks) {
+    assertDateOrder(
+      body.startDate !== undefined ? body.startDate : task.startDate,
+      body.dueDate !== undefined ? body.dueDate : task.dueDate,
+    );
   }
 
   if (projectIds.length > 1 && (body.statusId || body.phaseId || body.milestoneId || body.releaseId)) {
@@ -779,7 +921,9 @@ export const bulkUpdate = async (req: Request, res: Response) => {
   if (body.qaStatus) scalars.qaStatus = body.qaStatus;
   if (body.milestoneId !== undefined) scalars.milestoneId = body.milestoneId;
   if (body.releaseId !== undefined) scalars.releaseId = body.releaseId;
+  if (body.startDate !== undefined) scalars.startDate = body.startDate;
   if (body.dueDate !== undefined) scalars.dueDate = body.dueDate;
+  if (body.progress !== undefined) scalars.progress = body.progress;
 
   if (Object.keys(scalars).length) {
     await svc.assertProjectScope(projectIds[0]!, {
@@ -791,6 +935,22 @@ export const bulkUpdate = async (req: Request, res: Response) => {
   }
 
   const ids = tasks.map((t) => t.id);
+
+  // One status for the whole selection, so the category — and therefore the
+  // issue gate and the percentage — is worked out once.
+  if (body.statusId) {
+    const nextStatus = await prisma.taskStatus.findUniqueOrThrow({
+      where: { id: body.statusId },
+      select: { category: true },
+    });
+    await assertTasksStatusAllowedByIssue(ids, nextStatus.category);
+    scalars.completedAt = nextStatus.category === 'DONE' ? new Date() : null;
+    if (nextStatus.category === 'DONE') {
+      scalars.progress = 100;
+    } else if (body.progress !== undefined) {
+      scalars.progress = Math.min(body.progress, 99);
+    }
+  }
 
   await prisma.$transaction(async (tx) => {
     if (Object.keys(scalars).length) {
@@ -819,6 +979,18 @@ export const bulkUpdate = async (req: Request, res: Response) => {
       });
     }
   });
+
+  // One pass per affected issue, not per task: `advanceIssueFromTasks` reads
+  // every task of the issue, so calling it twice for the same issue would be
+  // the same query and the same answer.
+  if (body.statusId) {
+    const seen = new Set<string>();
+    for (const task of tasks) {
+      if (!task.issueId || seen.has(task.issueId)) continue;
+      seen.add(task.issueId);
+      await advanceIssueFromTasks(task.id, { id: auth.id, name: auth.user.name });
+    }
+  }
 
   await logActivity({
     actorId: auth.id,
@@ -903,6 +1075,154 @@ export const bulkUpdate = async (req: Request, res: Response) => {
   }
 
   res.json({ updated: ids.length });
+};
+
+/**
+ * Pulls another developer onto a task to help.
+ *
+ * Additive and deliberately low-friction: anyone already on the task can call
+ * for help without needing `task:assign`, because needing a lead's attention to
+ * get a second pair of hands is exactly what stops people asking.
+ */
+export const addHelper = async (req: Request, res: Response) => {
+  const auth = getAuth(req);
+  const ref = await svc.findTaskRef(String(req.params.taskId));
+  const access = await auth.requireProject(ref.projectId, 'task:view');
+  const body = req.body as { userId: string; note?: string };
+
+  const task = await prisma.task.findUniqueOrThrow({
+    where: { id: ref.id },
+    select: {
+      key: true,
+      title: true,
+      description: true,
+      assignees: { select: { userId: true } },
+    },
+  });
+
+  const isAssignee = task.assignees.some((assignee) => assignee.userId === auth.id);
+  const can = (permission: string) => auth.isSuperAdmin || access.permissions.has(permission);
+  if (!isAssignee && !can('task:assign')) {
+    throw forbidden('Only someone working on this task, or a lead, can ask for help');
+  }
+
+  if (task.assignees.some((assignee) => assignee.userId === body.userId)) {
+    throw badRequest('They are already working on this task');
+  }
+
+  await svc.assertProjectScope(ref.projectId, { assigneeIds: [body.userId] });
+
+  await prisma.$transaction(async (tx) => {
+    await tx.taskAssignee.create({ data: { taskId: ref.id, userId: body.userId } });
+    await tx.taskWatcher.createMany({
+      data: [{ taskId: ref.id, userId: body.userId }],
+      skipDuplicates: true,
+    });
+  });
+
+  await logActivity({
+    actorId: auth.id,
+    action: 'task.helper_added',
+    entityType: 'TASK',
+    entityId: ref.id,
+    projectId: ref.projectId,
+    taskId: ref.id,
+    meta: { userId: body.userId, note: body.note ?? null },
+  });
+
+  const url = svc.taskUrl(access.projectKey, task.key);
+
+  await notify({
+    userIds: [body.userId],
+    event: 'TASK_ASSIGNED',
+    title: `${auth.user.name} asked for your help on ${task.key}`,
+    body: [
+      `Task: ${task.title}`,
+      ...(body.note ? [`Note: ${body.note}`] : []),
+      `Description: ${shortDescription(task.description)}`,
+    ].join('\n'),
+    url,
+    actorId: auth.id,
+    projectId: ref.projectId,
+    taskId: ref.id,
+    telegramButtons: [
+      [
+        { text: '▶️ Start', callbackData: `task:start:${ref.id}` },
+        { text: '✅ Done', callbackData: `task:done:${ref.id}` },
+      ],
+    ],
+  });
+
+  // Everybody else on the task should know who just joined.
+  await notify({
+    userIds: task.assignees.map((assignee) => assignee.userId).filter((id) => id !== auth.id),
+    event: 'TASK_UPDATED',
+    title: `${task.key} picked up another pair of hands`,
+    body: `${auth.user.name} asked for help on “${task.title}”.`,
+    url,
+    actorId: auth.id,
+    projectId: ref.projectId,
+    taskId: ref.id,
+  });
+
+  const updated = await prisma.task.findUniqueOrThrow({
+    where: { id: ref.id },
+    select: svc.taskDetailSelect,
+  });
+  res.status(201).json({ data: svc.shapeTask(updated) });
+};
+
+/** Takes a helper back off a task. A lead's call, or your own. */
+export const removeHelper = async (req: Request, res: Response) => {
+  const auth = getAuth(req);
+  const ref = await svc.findTaskRef(String(req.params.taskId));
+  const access = await auth.requireProject(ref.projectId, 'task:view');
+  const userId = String(req.params.userId);
+
+  const can = (permission: string) => auth.isSuperAdmin || access.permissions.has(permission);
+  if (userId !== auth.id && !can('task:assign')) {
+    throw forbidden('Only a lead can take somebody else off a task');
+  }
+
+  const existing = await prisma.taskAssignee.findUnique({
+    where: { taskId_userId: { taskId: ref.id, userId } },
+  });
+  if (!existing) throw notFound('They are not on this task');
+
+  await prisma.taskAssignee.delete({ where: { taskId_userId: { taskId: ref.id, userId } } });
+
+  await logActivity({
+    actorId: auth.id,
+    action: 'task.helper_removed',
+    entityType: 'TASK',
+    entityId: ref.id,
+    projectId: ref.projectId,
+    taskId: ref.id,
+    meta: { userId },
+  });
+
+  if (userId !== auth.id) {
+    const task = await prisma.task.findUniqueOrThrow({
+      where: { id: ref.id },
+      select: { key: true, title: true },
+    });
+    await notify({
+      userIds: [userId],
+      event: 'TASK_UNASSIGNED',
+      title: `You were removed from ${task.key}`,
+      body: `${auth.user.name} took you off “${task.title}”.`,
+      url: svc.taskUrl(access.projectKey, task.key),
+      actorId: auth.id,
+      projectId: ref.projectId,
+      taskId: ref.id,
+    });
+  }
+
+  const updated = await prisma.task.findUniqueOrThrow({
+    where: { id: ref.id },
+    select: svc.taskDetailSelect,
+  });
+  res.json({ data: svc.shapeTask(updated) });
 };
 
 // --- Watchers --------------------------------------------------------------

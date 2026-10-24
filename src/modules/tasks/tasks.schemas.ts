@@ -28,6 +28,7 @@ export const listTasksQuery = paginationSchema.extend({
   milestoneId: z.string().optional(),
   releaseId: z.string().optional(),
   parentTaskId: z.string().optional(),
+  issueId: z.string().optional(),
   /** `true` hides subtasks from flat lists. */
   topLevelOnly: z.coerce.boolean().default(false),
   unassigned: z.coerce.boolean().optional(),
@@ -37,7 +38,7 @@ export const listTasksQuery = paginationSchema.extend({
   dueWithinDays: z.coerce.number().int().min(0).max(365).optional(),
   includeDone: z.coerce.boolean().default(true),
   sort: z
-    .enum(['position', 'dueDate', 'priority', 'createdAt', 'updatedAt', 'title', 'key'])
+    .enum(['position', 'dueDate', 'priority', 'progress', 'createdAt', 'updatedAt', 'title', 'key'])
     .default('position'),
   order: z.enum(['asc', 'desc']).default('asc'),
   groupBy: z.enum(['none', 'status', 'assignee', 'priority', 'phase', 'milestone']).default('none'),
@@ -60,6 +61,8 @@ export const createTaskSchema = z.object({
   startDate: optionalDate,
   dueDate: optionalDate,
   estimateHours: z.number().min(0).max(10000).nullish(),
+  progress: z.number().int().min(0).max(100).optional(),
+  issueId: z.string().nullish(),
   checklist: z.array(z.string().min(1).max(300)).max(50).optional(),
 });
 
@@ -78,8 +81,22 @@ export const updateTaskSchema = z.object({
   dueDate: optionalDate,
   estimateHours: z.number().min(0).max(10000).nullish(),
   spentHours: z.number().min(0).max(10000).nullish(),
+  progress: z.number().int().min(0).max(100).optional(),
+  issueId: z.string().nullish(),
   labelIds: z.array(z.string().min(1)).max(20).optional(),
   assigneeIds: z.array(z.string().min(1)).max(20).optional(),
+});
+
+/**
+ * Pulling another developer onto a task to help.
+ *
+ * Separate from `assigneeIds` because it is additive and the permission rules
+ * differ: anybody already on the task may call for help, whereas replacing the
+ * assignee list is an `task:assign` act.
+ */
+export const addHelperSchema = z.object({
+  userId: z.string().min(1, 'Choose who should help'),
+  note: z.string().trim().max(500).optional(),
 });
 
 export const moveTaskSchema = z.object({
@@ -127,7 +144,9 @@ export const bulkUpdateSchema = z.object({
   qaStatus: z.enum(QA_STATUSES).optional(),
   milestoneId: z.string().nullish(),
   releaseId: z.string().nullish(),
+  startDate: optionalDate,
   dueDate: optionalDate,
+  progress: z.number().int().min(0).max(100).optional(),
   addAssigneeIds: z.array(z.string().min(1)).max(20).optional(),
   removeAssigneeIds: z.array(z.string().min(1)).max(20).optional(),
   addLabelIds: z.array(z.string().min(1)).max(20).optional(),

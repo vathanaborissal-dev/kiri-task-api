@@ -1,5 +1,5 @@
 import { uploadRemoteUrl } from '../lib/cloudinary.js';
-import { badRequest, forbidden, notFound } from '../lib/errors.js';
+import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js';
 import { prisma } from '../lib/prisma.js';
 import { logActivity } from '../services/activity.js';
 import type { AuthContext } from '../services/authContext.js';
@@ -7,6 +7,13 @@ import { notify } from '../services/notifications.js';
 import type { IssueStatus, Severity, StatusCategory } from '../generated/prisma/enums.js';
 import { nextIssueKey } from '../modules/tasks/tasks.service.js';
 import { STATUS_LABEL } from '../modules/issues/issues.service.js';
+import {
+  advanceIssueFromTasks,
+  assertTaskStatusAllowedByIssue,
+  planTaskSyncForIssueStatus,
+  syncTasksToIssueStatus,
+} from '../modules/issues/issueTaskSync.js';
+import { refuseTransition } from '../modules/issues/issueWorkflow.js';
 
 /**
  * Bot-side write operations.
@@ -29,6 +36,8 @@ export const moveTaskToCategory = async (
       title: true,
       projectId: true,
       statusId: true,
+      progress: true,
+      issueId: true,
       status: { select: { name: true, category: true } },
       project: { select: { key: true } },
       reporterId: true,
@@ -49,11 +58,20 @@ export const moveTaskToCategory = async (
     return { unchanged: true as const, task, status: target };
   }
 
+  // A task on a settled issue stays put until the issue is reopened, whichever
+  // client is asking.
+  await assertTaskStatusAllowedByIssue(task.id, target.category);
+
   await prisma.task.update({
     where: { id: task.id },
     data: {
       statusId: target.id,
       completedAt: target.category === 'DONE' ? new Date() : null,
+      ...(target.category === 'DONE'
+        ? { progress: 100 }
+        : task.progress === 100
+          ? { progress: 90 }
+          : {}),
     },
   });
 
@@ -82,6 +100,12 @@ export const moveTaskToCategory = async (
     taskId: task.id,
   });
 
+  // And the issue catches up: starting or finishing a task from the bot moves
+  // the issue exactly as it would from the board.
+  if (task.issueId) {
+    await advanceIssueFromTasks(task.id, { id: auth.id, name: auth.user.name });
+  }
+
   return { unchanged: false as const, task, status: target };
 };
 
@@ -107,17 +131,33 @@ export const setIssueStatus = async (
   });
   if (!issue) throw notFound('Issue not found');
 
-  await auth.requireProject(issue.projectId, 'issue:change_status');
+  const access = await auth.requireProject(issue.projectId, 'issue:change_status');
   if (issue.status === status) return { unchanged: true as const, issue };
 
-  await prisma.issue.update({
-    where: { id: issue.id },
-    data: {
-      status,
-      resolvedAt: status === 'RESOLVED' ? new Date() : null,
-      closedAt: status === 'CLOSED' || status === 'WONT_FIX' ? new Date() : null,
-      ...(status === 'REOPENED' ? { reopenCount: issue.reopenCount + 1 } : {}),
-    },
+  // The bot is a client like any other: the same workflow table applies, so a
+  // tap on "Resolve" cannot do what the web app would refuse.
+  const refusal = refuseTransition(issue.status, status, (permission) =>
+    auth.isSuperAdmin || access.permissions.has(permission),
+  );
+  if (refusal) {
+    throw refusal.code === 'NEEDS_PERMISSION'
+      ? forbidden(refusal.message)
+      : conflict(refusal.message);
+  }
+
+  const taskSyncPlan = await planTaskSyncForIssueStatus(issue.id, status);
+
+  await prisma.$transaction(async (tx) => {
+    await syncTasksToIssueStatus(tx, issue.id, taskSyncPlan);
+    await tx.issue.update({
+      where: { id: issue.id },
+      data: {
+        status,
+        resolvedAt: status === 'RESOLVED' ? new Date() : null,
+        closedAt: status === 'CLOSED' || status === 'WONT_FIX' ? new Date() : null,
+        ...(status === 'REOPENED' ? { reopenCount: issue.reopenCount + 1 } : {}),
+      },
+    });
   });
 
   await logActivity({
@@ -297,6 +337,9 @@ export const createIssueFromTelegram = async (
     description: string | null;
     severity: Severity;
     phaseId: string | null;
+    /** `YYYY-MM-DD`, as the bot's date steps collect them. */
+    startDate?: string | null;
+    dueDate?: string | null;
   },
 ) => {
   const access = await auth.requireProject(input.projectId, 'issue:create');
@@ -315,6 +358,8 @@ export const createIssueFromTelegram = async (
         phaseId: input.phaseId,
         reporterId: auth.id,
         status: 'OPEN',
+        startDate: input.startDate ? new Date(`${input.startDate}T00:00:00.000Z`) : null,
+        dueDate: input.dueDate ? new Date(`${input.dueDate}T00:00:00.000Z`) : null,
         watchers: { create: { userId: auth.id } },
       },
       select: {
